@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* 与 Layout 100vh 壳层配合：避免整页再滚一层 */
+  html {
+    height: 100%;
+  }
+  body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+  #root {
+    height: 100%;
+    min-height: 100%;
+  }
+}
+
+@layer components {
+  /**
+   * Ant Design Sider 在 aside 内还有一层 .ant-layout-sider-children；
+   * 若不设为纵向 flex，中间导航的 flex:1 / min-height:0 不会生效，菜单再长也无法滚动。
+   */
+  .app-shell-sider.ant-layout-sider {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-shell-sider.ant-layout-sider > .ant-layout-sider-children {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  /**
+   * 应用内滚动区域（主内容区、侧栏菜单、弹窗表单等）
+   * Firefox: thin + 轨道透明；WebKit：细圆角滑块，悬停加深
+   */
+  .app-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
+  }
+
+  .app-scrollbar:hover {
+    scrollbar-color: rgba(0, 0, 0, 0.38) rgba(0, 0, 0, 0.04);
+  }
+
+  .app-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin: 6px 0;
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.18);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .app-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.32);
+  }
+
+  .app-scrollbar::-webkit-scrollbar-thumb:active {
+    background-color: rgba(0, 0, 0, 0.45);
+  }
+
+  .app-scrollbar::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /**
+   * 左侧主导航中间滚动区：不带动主内容滚动链、iOS 惯性、略窄滑条、底边留白
+   */
+  .sider-nav-scroll {
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 10px;
+  }
+
+  .sider-nav-scroll.app-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sider-nav-scroll.app-scrollbar::-webkit-scrollbar-thumb {
+    border: 1px solid transparent;
+  }
+
+  /**
+   * 宽表横向滚动条隐藏（热流道列表、模具档案列表等；触控板/Shift+滚轮仍可横滚）
+   */
+  .hot-runner-spec-table-wrap .ant-table-container,
+  .hot-runner-spec-table-wrap .ant-table-content,
+  .hot-runner-spec-table-wrap .ant-table-body,
+  .sel-molds-table-wrap .ant-table-container,
+  .sel-molds-table-wrap .ant-table-content,
+  .sel-molds-table-wrap .ant-table-body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .hot-runner-spec-table-wrap .ant-table-container::-webkit-scrollbar,
+  .hot-runner-spec-table-wrap .ant-table-content::-webkit-scrollbar,
+  .hot-runner-spec-table-wrap .ant-table-body::-webkit-scrollbar,
+  .sel-molds-table-wrap .ant-table-container::-webkit-scrollbar,
+  .sel-molds-table-wrap .ant-table-content::-webkit-scrollbar,
+  .sel-molds-table-wrap .ant-table-body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
