@@ -1,0 +1,206 @@
+[
+  {
+    "sheet_name": "分流板大类",
+    "main_category": "分流板大类",
+    "sub_categories": [
+      {
+        "sub_category": "属性类",
+        "attribute": "分流板材质",
+        "options": [
+          "FS136",
+          "4Cr13",
+          "4Cr13H",
+          "SKD61",
+          "DC53",
+          "P20"
+        ]
+      },
+      {
+        "sub_category": "桥板",
+        "attribute": "分流板搭桥样式",
+        "options": [
+          "板-转接环-板",
+          "板-转接环-主射咀-板"
+        ]
+      }
+    ]
+  },
+  {
+    "sheet_name": "主射咀大类",
+    "main_category": "主射咀大类",
+    "sub_categories": [
+      {
+        "sub_category": "主射咀本体",
+        "attribute": "加热型本体",
+        "options": [
+          "加热25",
+          "加热30",
+          "加热35",
+          "单咀主射咀",
+          "单阀主射咀",
+          "主射咀本体（搭桥）",
+          "主射咀本体（法向分流板）"
+        ]
+      },
+      {
+        "sub_category": "SR球头",
+        "attribute": "SR11-φ4",
+        "options": [
+          "SR11-φ6",
+          "SR11-φ8",
+          "SR16-φ4",
+          "SR16-φ6",
+          "SR16-φ8",
+          "SR21-φ4",
+          "SR21-φ6",
+          "SR21-φ8"
+        ]
+      },
+      {
+        "sub_category": "主射咀加热器",
+        "attribute": "铜套加热器",
+        "options": [
+          "弹簧加热器",
+          "镶嵌φ1.0圆丝加热器",
+          "镶嵌φ1.5圆丝加热器",
+          "镶嵌φ1.8圆丝加热器",
+          "镶嵌4.2*2.2扁丝加热器"
+        ]
+      }
+    ]
+  },
+  {
+    "sheet_name": "热咀大类",
+    "main_category": "热咀大类",
+    "sub_categories": [
+      {
+        "sub_category": "热咀本体",
+        "attribute": "底座类型",
+        "options": [
+          "板平压",
+          "螺牙",
+          "斜孔"
+        ]
+      },
+      {
+        "sub_category": "垫圈",
+        "attribute": "镶嵌用",
+        "options": [
+          "20",
+          "25",
+          "30",
+          "35",
+          "45"
+        ]
+      },
+      {
+        "sub_category": "本体碟簧",
+        "attribute": "20",
+        "options": [
+          "25",
+          "30",
+          "35",
+          "45"
+        ]
+      },
+      {
+        "sub_category": "热咀咀头",
+        "attribute": "热咀结构代码",
+        "options": [
+          "开放式",
+          "大水口",
+          "SLT",
+          "TOE",
+          "SOE",
+          "TLS",
+          "OA",
+          "PLT",
+          "PLS",
+          "TLC",
+          "SLC"
+        ]
+      },
+      {
+        "sub_category": "运水套",
+        "attribute": "不封针式运水套",
+        "options": [
+          "封针式运水套",
+          "3D打印水套",
+          "运水套顶杆",
+          "密封圈",
+          "压块",
+          "螺丝"
+        ]
+      }
+    ]
+  },
+  {
+    "sheet_name": "驱动系统",
+    "main_category": "驱动系统",
+    "sub_categories": [
+      {
+        "sub_category": "阀针",
+        "attribute": "阀针规格",
+        "options": [
+          "φ3-φ1.0",
+          "φ3-φ1.5",
+          "φ4-φ1.5",
+          "φ4-φ2.0"
+        ]
+      },
+      {
+        "sub_category": "阀套",
+        "attribute": "常规阀套",
+        "options": [
+          "φ3",
+          "φ4",
+          "φ5",
+          "φ6",
+          "φ8",
+          "φ10"
+        ]
+      },
+      {
+        "sub_category": "在气缸板上开孔的驱动器",
+        "attribute": "HS40",
+        "options": [
+          "缸盖",
+          "缸体",
+          "活塞",
+          "挂针块",
+          "调节块"
+        ]
+      },
+      {
+        "sub_category": "固定在分流板上的驱动器",
+        "attribute": "整体式气缸",
+        "options": [
+          "180°接头",
+          "135°接头",
+          "90°接头"
+        ]
+      },
+      {
+        "sub_category": "单点针阀补充零件",
+        "attribute": "底座",
+        "options": [
+          "分流体",
+          "防转销",
+          "密封铜环",
+          "叠模母模转接环"
+        ]
+      },
+      {
+        "sub_category": "导向套",
+        "attribute": "φ3",
+        "options": [
+          "φ4",
+          "φ5",
+          "φ6",
+          "φ8",
+          "φ10"
+        ]
+      }
+    ]
+  }
+]

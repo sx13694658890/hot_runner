@@ -22,8 +22,8 @@ import type { ColumnsType } from "antd/es/table";
 import { Link } from "react-router-dom";
 
 import { API_V1, ApiError, apiFetch, formatApiDetail, getToken } from "@/lib/api";
+import { fetchHotRunnerSpecDictBundle } from "@/lib/selectionCatalogDictApi";
 import type {
-  MoldDictBundleResponse,
   SelMoldHotRunnerSpecListRead,
   SelMoldHotRunnerSpecPage,
   SelMoldHotRunnerSpecPatch,
@@ -127,12 +127,13 @@ export function SelectionCatalogHotRunnersPage() {
   const [editLoading, setEditLoading] = useState(false);
   const [editSaving, setEditSaving] = useState(false);
   const [editingSpecId, setEditingSpecId] = useState<string | null>(null);
-  const [dictCategories, setDictCategories] = useState<MoldDictBundleResponse["categories"] | null>(null);
+  const [dictCategories, setDictCategories] = useState<Awaited<ReturnType<typeof fetchHotRunnerSpecDictBundle>> | null>(
+    null,
+  );
 
   const loadDictOptions = useCallback(async () => {
     try {
-      const b = await apiFetch<MoldDictBundleResponse>("/selection-catalog/dict/hot-runner-spec-options");
-      setDictCategories(b.categories);
+      setDictCategories(await fetchHotRunnerSpecDictBundle());
     } catch {
       setDictCategories(null);
     }

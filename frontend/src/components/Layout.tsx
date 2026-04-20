@@ -30,6 +30,10 @@ const navItems: NavItem[] = [
   { to: "/selection-catalog/molds", label: "模具档案", perm: "selection:read" },
   { to: "/selection-catalog/hot-runners", label: "热流道列表", perm: "selection:read" },
   { to: "/selection-catalog/dict", label: "选型字典", perm: "selection:read" },
+  { to: "/selection-catalog/manifold-dict", label: "分流板字典", perm: "selection:read" },
+  { to: "/selection-catalog/main-nozzle-dict", label: "主射咀大类字典", perm: "selection:read" },
+  { to: "/selection-catalog/hot-nozzle-dict", label: "热咀大类字典", perm: "selection:read" },
+  { to: "/selection-catalog/drive-system-dict", label: "驱动系统字典", perm: "selection:read" },
   {
     to: "/standard-parts",
     label: "标准件图库",

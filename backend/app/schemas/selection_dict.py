@@ -18,6 +18,20 @@ class SelDictCategoryRead(ORMModel):
     sort_order: int
 
 
+class SelDictCategoryCreate(BaseModel):
+    """新增字典分类；code 全局唯一，建议小写+下划线，与业务常量对齐。"""
+
+    code: str = Field(..., min_length=1, max_length=80)
+    label: str = Field(..., min_length=1, max_length=200)
+    sort_order: int = 0
+
+
+class SelDictCategoryPatch(BaseModel):
+    code: str | None = Field(None, min_length=1, max_length=80)
+    label: str | None = Field(None, min_length=1, max_length=200)
+    sort_order: int | None = None
+
+
 class SelDictItemRead(ORMModel):
     id: UUID
     category_id: UUID

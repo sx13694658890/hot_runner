@@ -8,6 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.sel_hrspec_dict import HR_SPEC_DICT_COLUMN_TO_CATEGORY, HRSPEC_CATEGORY_CODES
+from app.constants.sel_drive_system_detail_dict import DRIVE_SYSTEM_DETAIL_CATEGORY_CODES
+from app.constants.sel_hot_nozzle_detail_dict import HOT_NOZZLE_DETAIL_CATEGORY_CODES
+from app.constants.sel_main_nozzle_detail_dict import MAIN_NOZZLE_DETAIL_CATEGORY_CODES
+from app.constants.sel_manifold_detail_dict import MANIFOLD_DETAIL_CATEGORY_CODES
 from app.constants.sel_mold_dict import MOLD_DICT_COLUMN_TO_CATEGORY
 from app.constants.sel_product_dict import PRODUCT_DICT_COLUMN_TO_CATEGORY
 from app.models.selection_catalog import SelDictCategory, SelDictItem, SelMaterial
@@ -147,6 +151,78 @@ async def list_hrspec_dict_options_bundle(db: AsyncSession) -> dict[str, list[di
         .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
         .where(
             SelDictCategory.code.in_(HRSPEC_CATEGORY_CODES),
+            SelDictItem.is_active.is_(True),
+        )
+        .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)
+    )
+    rows = (await db.execute(stmt)).all()
+    bundle: dict[str, list[dict[str, object]]] = {}
+    for code, iid, lbl, so in rows:
+        bundle.setdefault(code, []).append({"id": iid, "label": lbl, "sort_order": so})
+    return bundle
+
+
+async def list_manifold_detail_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
+    """分流板截图/Excel 扩展字典（code 前缀 hrspec_mfld_）→ 选项列表，仅启用项。"""
+    stmt = (
+        select(SelDictCategory.code, SelDictItem.id, SelDictItem.label, SelDictItem.sort_order)
+        .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
+        .where(
+            SelDictCategory.code.in_(MANIFOLD_DETAIL_CATEGORY_CODES),
+            SelDictItem.is_active.is_(True),
+        )
+        .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)
+    )
+    rows = (await db.execute(stmt)).all()
+    bundle: dict[str, list[dict[str, object]]] = {}
+    for code, iid, lbl, so in rows:
+        bundle.setdefault(code, []).append({"id": iid, "label": lbl, "sort_order": so})
+    return bundle
+
+
+async def list_main_nozzle_detail_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
+    """主射咀大类截图/Excel 扩展字典（code 前缀 hrspec_mnz_）→ 选项列表，仅启用项。"""
+    stmt = (
+        select(SelDictCategory.code, SelDictItem.id, SelDictItem.label, SelDictItem.sort_order)
+        .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
+        .where(
+            SelDictCategory.code.in_(MAIN_NOZZLE_DETAIL_CATEGORY_CODES),
+            SelDictItem.is_active.is_(True),
+        )
+        .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)
+    )
+    rows = (await db.execute(stmt)).all()
+    bundle: dict[str, list[dict[str, object]]] = {}
+    for code, iid, lbl, so in rows:
+        bundle.setdefault(code, []).append({"id": iid, "label": lbl, "sort_order": so})
+    return bundle
+
+
+async def list_hot_nozzle_detail_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
+    """热咀大类截图/Excel 扩展字典（code 前缀 hrspec_hnz_）→ 选项列表，仅启用项。"""
+    stmt = (
+        select(SelDictCategory.code, SelDictItem.id, SelDictItem.label, SelDictItem.sort_order)
+        .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
+        .where(
+            SelDictCategory.code.in_(HOT_NOZZLE_DETAIL_CATEGORY_CODES),
+            SelDictItem.is_active.is_(True),
+        )
+        .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)
+    )
+    rows = (await db.execute(stmt)).all()
+    bundle: dict[str, list[dict[str, object]]] = {}
+    for code, iid, lbl, so in rows:
+        bundle.setdefault(code, []).append({"id": iid, "label": lbl, "sort_order": so})
+    return bundle
+
+
+async def list_drive_system_detail_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
+    """驱动系统截图/Excel 扩展字典（code 前缀 hrspec_drv_）→ 选项列表，仅启用项。"""
+    stmt = (
+        select(SelDictCategory.code, SelDictItem.id, SelDictItem.label, SelDictItem.sort_order)
+        .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
+        .where(
+            SelDictCategory.code.in_(DRIVE_SYSTEM_DETAIL_CATEGORY_CODES),
             SelDictItem.is_active.is_(True),
         )
         .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)

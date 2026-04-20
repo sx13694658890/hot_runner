@@ -339,6 +339,20 @@ export interface SelDictCategoryRead {
   sort_order: number;
 }
 
+/** POST /selection-catalog/dict/categories */
+export interface SelDictCategoryCreateBody {
+  code: string;
+  label: string;
+  sort_order: number;
+}
+
+/** PATCH /selection-catalog/dict/categories/{id} */
+export interface SelDictCategoryPatchBody {
+  code?: string;
+  label?: string;
+  sort_order?: number;
+}
+
 export interface SelDictItemRead {
   id: UUID;
   category_id: UUID;

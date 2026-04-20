@@ -1,27 +1,66 @@
 import { useCallback, useEffect, useState } from "react";
-import { Button, Input, InputNumber, Modal, Select, Switch, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Input, InputNumber, Modal, Select, Switch, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { Link } from "react-router-dom";
 
 import { ApiError, apiFetch, formatApiDetail } from "@/lib/api";
-import type {
-  SelDictCategoryCreateBody,
-  SelDictCategoryPatchBody,
-  SelDictCategoryRead,
-  SelDictItemRead,
-} from "@/lib/selectionCatalogTypes";
+import { fetchManifoldDetailDictBundle } from "@/lib/selectionCatalogDictApi";
+import type { SelDictCategoryRead, SelDictItemRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
+import { DictCategoryPrefixToolbar } from "@/features/selection-catalog/DictCategoryPrefixToolbar";
 
-export function SelectionCatalogDictPage() {
+/** 与 docs/分流板字典-前端对接.md、backend sel_manifold_detail_dict 顺序一致 */
+const MFLD_CATEGORY_ORDER: readonly string[] = [
+  "hrspec_mfld_process",
+  "hrspec_mfld_bridge_style",
+  "hrspec_mfld_bridge_channel_diameter",
+  "hrspec_mfld_manifold_thickness",
+  "hrspec_mfld_runner_layout",
+  "hrspec_mfld_point_coding",
+  "hrspec_mfld_manifold_runner_diameter",
+  "hrspec_mfld_runner_layers",
+  "hrspec_mfld_spacer_block",
+  "hrspec_mfld_plate_disc_spring",
+  "hrspec_mfld_center_locating_pin",
+  "hrspec_mfld_anti_rotation_pin",
+  "hrspec_mfld_plug_regular",
+  "hrspec_mfld_plug_flat",
+  "hrspec_mfld_plug_insert_basic",
+  "hrspec_mfld_plug_insert_t",
+  "hrspec_mfld_plug_insert_i",
+  "hrspec_mfld_plug_insert_l",
+  "hrspec_mfld_water_connector",
+  "hrspec_mfld_oil_connector",
+] as const;
+
+const MFLD_PREFIX = "hrspec_mfld_";
+
+function isMfldCategory(code: string): boolean {
+  return code.startsWith(MFLD_PREFIX);
+}
+
+function sortMfldCategories(cats: SelDictCategoryRead[]): SelDictCategoryRead[] {
+  const idx = new Map(MFLD_CATEGORY_ORDER.map((c, i) => [c, i]));
+  return [...cats].sort((a, b) => {
+    const ia = idx.get(a.code) ?? 999;
+    const ib = idx.get(b.code) ?? 999;
+    if (ia !== ib) return ia - ib;
+    return a.code.localeCompare(b.code);
+  });
+}
+
+export function SelectionCatalogManifoldDictPage() {
   const { can } = useAuth();
   const canRead = can("selection:read");
   const canWrite = can("selection:write");
 
-  const [categories, setCategories] = useState<SelDictCategoryRead[]>([]);
+  const [mfldCategories, setMfldCategories] = useState<SelDictCategoryRead[]>([]);
   const [categoryCode, setCategoryCode] = useState<string>("");
   const [items, setItems] = useState<SelDictItemRead[]>([]);
   const [loadingCats, setLoadingCats] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [bundleLoading, setBundleLoading] = useState(false);
+  const [bundlePreviewCount, setBundlePreviewCount] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -31,44 +70,34 @@ export function SelectionCatalogDictPage() {
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [catModalOpen, setCatModalOpen] = useState(false);
-  const [catModalMode, setCatModalMode] = useState<"create" | "edit">("create");
-  const [catFormCode, setCatFormCode] = useState("");
-  const [catFormLabel, setCatFormLabel] = useState("");
-  const [catFormSort, setCatFormSort] = useState(0);
-  const [catSaving, setCatSaving] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-
-  const loadCategories = useCallback(async (): Promise<SelDictCategoryRead[]> => {
-    setErr(null);
-    setLoadingCats(true);
-    try {
-      const rows = await apiFetch<SelDictCategoryRead[]>("/selection-catalog/dict/categories");
-      setCategories(rows);
-      return rows;
-    } catch (e) {
-      setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "加载分类失败");
-      setCategories([]);
-      return [];
-    } finally {
-      setLoadingCats(false);
-    }
-  }, []);
+  const loadCategories = useCallback(
+    async (selectCode?: string) => {
+      if (!canRead) return;
+      setErr(null);
+      setLoadingCats(true);
+      try {
+        const rows = await apiFetch<SelDictCategoryRead[]>("/selection-catalog/dict/categories");
+        const sorted = sortMfldCategories(rows.filter((c) => isMfldCategory(c.code)));
+        setMfldCategories(sorted);
+        setCategoryCode((prev) => {
+          if (selectCode && sorted.some((c) => c.code === selectCode)) return selectCode;
+          if (prev && sorted.some((c) => c.code === prev)) return prev;
+          return sorted[0]?.code ?? "";
+        });
+      } catch (e) {
+        setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "加载分类失败");
+        setMfldCategories([]);
+        setCategoryCode("");
+      } finally {
+        setLoadingCats(false);
+      }
+    },
+    [canRead],
+  );
 
   useEffect(() => {
     if (!canRead) return;
-    let cancelled = false;
-    void (async () => {
-      const rows = await loadCategories();
-      if (cancelled) return;
-      setCategoryCode((prev) => {
-        if (prev && rows.some((c) => c.code === prev)) return prev;
-        return rows[0]?.code ?? "";
-      });
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void loadCategories();
   }, [canRead, loadCategories]);
 
   useEffect(() => {
@@ -95,6 +124,24 @@ export function SelectionCatalogDictPage() {
       cancelled = true;
     };
   }, [canRead, categoryCode]);
+
+  const refreshBundlePreview = useCallback(async () => {
+    setBundleLoading(true);
+    try {
+      const bundle = await fetchManifoldDetailDictBundle();
+      const n = Object.values(bundle).reduce((acc, arr) => acc + arr.length, 0);
+      setBundlePreviewCount(n);
+    } catch {
+      setBundlePreviewCount(null);
+    } finally {
+      setBundleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!canRead) return;
+    void refreshBundlePreview();
+  }, [canRead, refreshBundlePreview]);
 
   const openCreate = () => {
     setEditRow(null);
@@ -134,7 +181,7 @@ export function SelectionCatalogDictPage() {
       const q = new URLSearchParams({ category_code: categoryCode, include_inactive: "true" });
       const rows = await apiFetch<SelDictItemRead[]>(`/selection-catalog/dict/items?${q.toString()}`);
       setItems(rows);
-      message.success(editRow ? "已保存" : "已新增字典项");
+      void refreshBundlePreview();
     } catch (e) {
       setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "保存失败");
     } finally {
@@ -150,88 +197,9 @@ export function SelectionCatalogDictPage() {
       await apiFetch(`/selection-catalog/dict/items/${row.id}`, { method: "DELETE" });
       const q = new URLSearchParams({ category_code: categoryCode, include_inactive: "true" });
       setItems(await apiFetch<SelDictItemRead[]>(`/selection-catalog/dict/items?${q.toString()}`));
-      message.success("已停用");
+      void refreshBundlePreview();
     } catch (e) {
       setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "停用失败");
-    }
-  };
-
-  const openCreateCategory = () => {
-    setCatModalMode("create");
-    setEditingCategoryId(null);
-    setCatFormCode("");
-    setCatFormLabel("");
-    setCatFormSort(categories.length > 0 ? Math.max(...categories.map((c) => c.sort_order)) + 1 : 0);
-    setCatModalOpen(true);
-  };
-
-  const openEditCategory = () => {
-    const cur = categories.find((c) => c.code === categoryCode);
-    if (!cur) return;
-    setCatModalMode("edit");
-    setEditingCategoryId(cur.id);
-    setCatFormCode(cur.code);
-    setCatFormLabel(cur.label);
-    setCatFormSort(cur.sort_order);
-    setCatModalOpen(true);
-  };
-
-  const submitCategoryModal = async () => {
-    if (!canWrite) return;
-    const code = catFormCode.trim();
-    const label = catFormLabel.trim();
-    if (!code || !label) return;
-    setCatSaving(true);
-    setErr(null);
-    try {
-      if (catModalMode === "create") {
-        const body: SelDictCategoryCreateBody = { code, label, sort_order: catFormSort };
-        const created = await apiFetch<SelDictCategoryRead>("/selection-catalog/dict/categories", {
-          method: "POST",
-          body,
-        });
-        await loadCategories();
-        setCategoryCode(created.code);
-        message.success("已新增字典分类");
-      } else if (editingCategoryId) {
-        const body: SelDictCategoryPatchBody = {
-          code,
-          label,
-          sort_order: catFormSort,
-        };
-        const updated = await apiFetch<SelDictCategoryRead>(
-          `/selection-catalog/dict/categories/${editingCategoryId}`,
-          { method: "PATCH", body },
-        );
-        await loadCategories();
-        setCategoryCode(updated.code);
-        message.success("已保存分类");
-      }
-      setCatModalOpen(false);
-    } catch (e) {
-      setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "保存分类失败");
-    } finally {
-      setCatSaving(false);
-    }
-  };
-
-  const deleteCurrentCategory = async () => {
-    if (!canWrite) return;
-    const cur = categories.find((c) => c.code === categoryCode);
-    if (!cur) return;
-    if (items.length > 0) {
-      message.warning("请先清空该分类下字典项后再删除分类");
-      return;
-    }
-    if (!window.confirm(`确定删除空分类「${cur.label}」（${cur.code}）？此操作不可恢复。`)) return;
-    setErr(null);
-    try {
-      await apiFetch(`/selection-catalog/dict/categories/${cur.id}`, { method: "DELETE" });
-      const rows = await loadCategories();
-      setCategoryCode(rows[0]?.code ?? "");
-      message.success("已删除分类");
-    } catch (e) {
-      setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "删除分类失败");
     }
   };
 
@@ -285,7 +253,7 @@ export function SelectionCatalogDictPage() {
     );
   }
 
-  const catLabel = categories.find((c) => c.code === categoryCode)?.label ?? categoryCode;
+  const catLabel = mfldCategories.find((c) => c.code === categoryCode)?.label ?? categoryCode;
 
   return (
     <div className="space-y-6">
@@ -293,13 +261,29 @@ export function SelectionCatalogDictPage() {
         <Link to="/selection-catalog" className="text-sm font-medium text-brand-600 hover:underline">
           ← 返回选型领域表
         </Link>
-        <h1 className="mt-2 text-2xl font-bold text-slate-800">选型字典</h1>
+        <h1 className="mt-2 text-2xl font-bold text-slate-800">分流板大类字典</h1>
         <p className="mt-1 text-sm text-slate-600">
-          维护模具档案根部下拉选项；可<strong className="mx-0.5">新增/编辑/删除字典分类</strong>，并在分类下增删改
-          <strong className="mx-0.5">字典项</strong>
-          （存 UUID，停用后新选不可选，历史仍可展示）。删除分类仅当该分类下无任何字典项。
+          数据来自《热流道系统》分流板大类截图/Excel，分类 <Typography.Text code>code</Typography.Text> 以{" "}
+          <Typography.Text code>hrspec_mfld_</Typography.Text> 开头；与扁平行热流道规格字段（
+          <Typography.Text code>hrspec_*</Typography.Text> 无 <Typography.Text code>mfld</Typography.Text>
+          ）独立。维护方式与「选型字典」相同，仅列出本前缀下的分类。
         </p>
       </div>
+
+      <Alert
+        type="info"
+        showIcon
+        message={
+          <span>
+            <strong>分流板材质</strong>仍使用热流道规格字典包中的{" "}
+            <Typography.Text code>hrspec_manifold_material</Typography.Text>，请至{" "}
+            <Link to="/selection-catalog/dict" className="font-medium text-brand-600 hover:underline">
+              选型字典
+            </Link>{" "}
+            中维护。
+          </span>
+        }
+      />
 
       {err ? (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{err}</div>
@@ -307,43 +291,51 @@ export function SelectionCatalogDictPage() {
 
       <div className="flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
         <label className="block min-w-[240px] text-sm">
-          <span className="text-slate-600">字典分类</span>
+          <span className="text-slate-600">字典分类（分流板大类）</span>
           <Select
-            className="mt-1 w-full min-w-[220px]"
+            className="mt-1 w-full min-w-[280px]"
             loading={loadingCats}
             value={categoryCode || undefined}
-            options={categories.map((c) => ({
+            options={mfldCategories.map((c) => ({
               value: c.code,
               label: `${c.label} (${c.code})`,
             }))}
             onChange={(v) => setCategoryCode(v)}
+            notFoundContent={loadingCats ? "加载中…" : "暂无 hrspec_mfld_ 分类，请检查后端种子"}
           />
         </label>
+        <DictCategoryPrefixToolbar
+          codePrefix={MFLD_PREFIX}
+          categories={mfldCategories}
+          categoryCode={categoryCode}
+          setCategoryCode={setCategoryCode}
+          reloadCategories={loadCategories}
+          itemsCount={items.length}
+          canWrite={canWrite}
+          setErr={setErr}
+        />
         {canWrite ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="default" onClick={openCreateCategory}>
-              新增分类
-            </Button>
-            <Button type="default" disabled={!categoryCode} onClick={openEditCategory}>
-              编辑当前分类
-            </Button>
-            <Button type="default" danger disabled={!categoryCode || items.length > 0} onClick={() => void deleteCurrentCategory()}>
-              删除当前分类
-            </Button>
-            <Button type="primary" disabled={!categoryCode} onClick={openCreate}>
-              新增字典项
-            </Button>
-          </div>
+          <Button type="primary" disabled={!categoryCode} onClick={openCreate}>
+            新增字典项
+          </Button>
         ) : (
           <p className="text-xs text-amber-800">当前账号无 selection:write，仅可查看。</p>
         )}
+        <div className="text-xs text-slate-500">
+          选项包预览（<Typography.Text code>GET …/manifold-detail-options</Typography.Text>
+          ）：{" "}
+          {bundleLoading ? (
+            "加载中…"
+          ) : bundlePreviewCount != null ? (
+            <>共 {bundlePreviewCount} 条字典项</>
+          ) : (
+            "—"
+          )}
+          <Button type="link" size="small" className="!px-1" onClick={() => void refreshBundlePreview()}>
+            刷新计数
+          </Button>
+        </div>
       </div>
-
-      {canWrite && categoryCode ? (
-        <Typography.Text type="secondary" className="block text-xs">
-          删除分类前须清空本表内所有字典项（含已停用项）；若业务表仍引用某字典项 UUID，请先在业务侧解除引用。
-        </Typography.Text>
-      ) : null}
 
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-4 py-3 text-sm font-medium text-slate-700">{catLabel}</div>
@@ -380,40 +372,6 @@ export function SelectionCatalogDictPage() {
               <Switch checked={formActive} onChange={setFormActive} />
               <span className="text-slate-600">启用（停用后不可用于新选）</span>
             </label>
-          ) : null}
-        </div>
-      </Modal>
-
-      <Modal
-        title={catModalMode === "create" ? "新增字典分类" : "编辑字典分类"}
-        open={catModalOpen}
-        onCancel={() => setCatModalOpen(false)}
-        onOk={() => void submitCategoryModal()}
-        confirmLoading={catSaving}
-        okButtonProps={{ disabled: !catFormCode.trim() || !catFormLabel.trim() }}
-      >
-        <div className="space-y-3 pt-2">
-          <label className="block text-sm">
-            <span className="text-slate-600">分类 code（全局唯一，建议小写+下划线）</span>
-            <Input
-              className="mt-1 font-mono text-sm"
-              value={catFormCode}
-              onChange={(e) => setCatFormCode(e.target.value)}
-              placeholder="如 mold_status"
-            />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-600">显示名称</span>
-            <Input className="mt-1" value={catFormLabel} onChange={(e) => setCatFormLabel(e.target.value)} />
-          </label>
-          <label className="block text-sm">
-            <span className="text-slate-600">排序</span>
-            <InputNumber className="mt-1 w-full" value={catFormSort} onChange={(v) => setCatFormSort(Number(v ?? 0))} />
-          </label>
-          {catModalMode === "edit" ? (
-            <Typography.Text type="secondary" className="block text-xs">
-              修改 code 后，下拉与其它引用该 code 的接口需一致；若与其它分类冲突将保存失败。
-            </Typography.Text>
           ) : null}
         </div>
       </Modal>

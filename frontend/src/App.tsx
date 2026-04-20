@@ -18,6 +18,10 @@ import { StandardPartsPage } from "@/pages/StandardPartsPage";
 import { RolesPage } from "@/pages/RolesPage";
 import { SelectionCatalogHotRunnersPage } from "@/pages/SelectionCatalogHotRunnersPage";
 import { SelectionCatalogDictPage } from "@/pages/SelectionCatalogDictPage";
+import { SelectionCatalogManifoldDictPage } from "@/pages/SelectionCatalogManifoldDictPage";
+import { SelectionCatalogMainNozzleDictPage } from "@/pages/SelectionCatalogMainNozzleDictPage";
+import { SelectionCatalogHotNozzleDictPage } from "@/pages/SelectionCatalogHotNozzleDictPage";
+import { SelectionCatalogDriveSystemDictPage } from "@/pages/SelectionCatalogDriveSystemDictPage";
 import { SelectionCatalogMoldDetailPage } from "@/pages/SelectionCatalogMoldDetailPage";
 import { SelectionCatalogMoldFormPage } from "@/pages/SelectionCatalogMoldFormPage";
 import { SelectionCatalogMoldsPage } from "@/pages/SelectionCatalogMoldsPage";
@@ -52,6 +56,10 @@ export default function App() {
               <Route path="/selection-catalog/mold/:moldId/edit" element={<SelectionCatalogMoldFormPage />} />
               <Route path="/selection-catalog/mold/:moldId" element={<SelectionCatalogMoldDetailPage />} />
               <Route path="/selection-catalog/dict" element={<SelectionCatalogDictPage />} />
+              <Route path="/selection-catalog/manifold-dict" element={<SelectionCatalogManifoldDictPage />} />
+              <Route path="/selection-catalog/main-nozzle-dict" element={<SelectionCatalogMainNozzleDictPage />} />
+              <Route path="/selection-catalog/hot-nozzle-dict" element={<SelectionCatalogHotNozzleDictPage />} />
+              <Route path="/selection-catalog/drive-system-dict" element={<SelectionCatalogDriveSystemDictPage />} />
               <Route path="/selection-catalog" element={<SelectionCatalogPage />} />
               <Route path="/rd/research/:rdId" element={<RdResearchDetailPage />} />
               <Route path="/rd/research" element={<RdResearchPage />} />
