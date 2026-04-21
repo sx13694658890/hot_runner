@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { MaterialPropertyDetailGrid } from "@/components/MaterialPropertyDetailGrid";
 import { ApiError, apiFetch, formatApiDetail } from "@/lib/api";
+import { IM_SPEC_DISPLAY_CELLS } from "@/features/selection-catalog/InjectionMachineCatalogFields";
 import type { SelMoldInfoRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -38,6 +39,34 @@ function formatWireFrame(v: boolean | null | undefined): string {
 function formatHaveNo(v: boolean | null | undefined): string {
   if (v === null || v === undefined) return "—";
   return v ? "有" : "没有";
+}
+
+function fmtSpec(v: string | number | null | undefined): string {
+  if (v === null || v === undefined || v === "") return "—";
+  return String(v);
+}
+
+function InjectionMachineSpecBlock({
+  spec,
+}: {
+  spec: NonNullable<SelMoldInfoRead["injection_machine_model_spec"]>;
+}) {
+  return (
+    <div className="mt-6 rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-3">
+      <h3 className="text-sm font-medium text-slate-800">机型技术参数（目录）</h3>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {IM_SPEC_DISPLAY_CELLS.map(({ key, label }) => (
+          <div
+            key={key}
+            className="rounded-md border border-slate-100 bg-white px-3 py-2 shadow-sm"
+          >
+            <div className="text-xs text-slate-500">{label}</div>
+            <div className="mt-0.5 text-sm font-medium text-slate-800">{fmtSpec(spec[key])}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function SelectionCatalogMoldDetailPage() {
@@ -129,6 +158,7 @@ export function SelectionCatalogMoldDetailPage() {
                   { label: "定位环偏心", value: row.locating_ring_eccentric_label },
                   { label: "订单需求", value: row.order_requirement_label },
                   { label: "热流道类型", value: row.hot_runner_type_label },
+                  { label: "热流道系统所有权", value: row.hot_runner_system_ownership_label },
                   { label: "点位编号规则", value: row.point_numbering_rule_label },
                   { label: "驱动器", value: row.driver_type_label },
                   { label: "电磁阀", value: row.solenoid_valve_label },
@@ -166,7 +196,10 @@ export function SelectionCatalogMoldDetailPage() {
                   { label: "感温线型号", value: row.thermocouple_type_label },
                   { label: "交付接线方式", value: row.delivery_wiring_method_label },
                   { label: "调机接线方式", value: row.debug_wiring_method_label },
-                  { label: "注塑机型号", value: row.injection_machine_model },
+                  { label: "注塑机品牌", value: row.injection_machine_brand_label },
+                  { label: "客户设备库", value: row.customer_equipment_library_label },
+                  { label: "注塑机型号(目录)", value: row.injection_machine_catalog_label },
+                  { label: "注塑机备注", value: row.injection_machine_model },
                   { label: "注塑机吨位(t)", value: row.injection_machine_tonnage },
                   { label: "炮筒球半径(mm)", value: row.barrel_sphere_radius },
                   { label: "炮筒出胶孔(mm)", value: row.barrel_orifice },
@@ -174,6 +207,9 @@ export function SelectionCatalogMoldDetailPage() {
                   { label: "更新时间", value: row.updated_at },
                 ]}
               />
+              {row.injection_machine_model_spec ? (
+                <InjectionMachineSpecBlock spec={row.injection_machine_model_spec} />
+              ) : null}
             </div>
           </section>
 

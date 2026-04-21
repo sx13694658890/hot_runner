@@ -13,6 +13,7 @@ import {
 import { Link, useMatch, useNavigate, useParams } from "react-router-dom";
 
 import { MaterialPropertyDetailGrid } from "@/components/MaterialPropertyDetailGrid";
+import { InjectionMachineCatalogFields } from "@/features/selection-catalog/InjectionMachineCatalogFields";
 import { ApiError, apiFetch, formatApiDetail } from "@/lib/api";
 import {
   emptyMoldForm,
@@ -23,6 +24,7 @@ import {
   MOLD_ROOT_DICT_FIELD_KEYS,
   MOLD_ROOT_FIELD_META,
   MOLD_ROOT_FREE_INPUT_KEYS,
+  MOLD_ROOT_INJECTION_METAS_EXCLUDED,
   moldReadToForm,
   PRODUCT_FIELD_META,
   productDictCategoryCode,
@@ -326,7 +328,7 @@ export function SelectionCatalogMoldFormPage() {
             <Space direction="vertical" size="middle" style={{ width: "100%" }}>
               <Card title="关联材料（附属性）" size="small" styles={{ header: { minHeight: 40 } }}>
                 <Typography.Paragraph type="secondary" style={{ marginTop: 0, fontSize: 12 }}>
-                  选择材料后展示该材料的属性参数（只读；材料主数据在领域表「材料主表」等入口维护）。
+                  选择材料后展示属性参数（只读）：数据按塑料牌号维护，此处展示该材料下排序第一的牌号所带属性行。
                 </Typography.Paragraph>
                 <label className="mt-1 block text-sm">
                   <span className="text-slate-600">材料缩写</span>
@@ -354,8 +356,19 @@ export function SelectionCatalogMoldFormPage() {
                 ) : null}
               </Card>
 
+              <Card title="注塑机（品牌→型号→参数）" size="small" styles={{ header: { minHeight: 40 } }}>
+                <Typography.Paragraph type="secondary" style={{ marginTop: 0, fontSize: 12 }}>
+                  与选型向导第 4 步一致：先品牌字典，再型号目录，下方展示机型技术参数（只读）。
+                </Typography.Paragraph>
+                <InjectionMachineCatalogFields
+                  root={form.root}
+                  setRoot={setRoot}
+                  disabled={!canWrite}
+                />
+              </Card>
+
               <Card
-                title="模具档案 · 选型 / 技术 / 冷却 / 接线 / 注塑机"
+                title="模具档案 · 选型 / 技术 / 冷却 / 接线"
                 size="small"
                 styles={{ header: { minHeight: 40 } }}
               >
@@ -363,7 +376,7 @@ export function SelectionCatalogMoldFormPage() {
                   带冒号项为任意输入；其余为下拉（选项来自选型字典）。
                 </Typography.Paragraph>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {MOLD_ROOT_FIELD_META.map((m) => (
+                  {MOLD_ROOT_FIELD_META.filter((m) => !MOLD_ROOT_INJECTION_METAS_EXCLUDED.has(m.key)).map((m) => (
                     <label key={m.key} className="block text-sm">
                       <span className="text-slate-600">{m.label}</span>
                       <MoldRootFieldControl

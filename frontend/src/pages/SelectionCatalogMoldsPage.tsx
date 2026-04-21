@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { ApiError, apiFetch, formatApiDetail } from "@/lib/api";
 import type { SelMoldInfoRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
+import { SelectionWizardDraftBanner } from "@/features/selection-catalog/SelectionWizardDraftBanner";
 
 function dashCell(v: unknown): string {
   if (v == null || v === "") return "—";
@@ -191,6 +192,8 @@ export function SelectionCatalogMoldsPage() {
           </Link>
         ) : null}
       </div>
+
+      <SelectionWizardDraftBanner />
 
       {err ? <Alert type="error" showIcon message={err} /> : null}
 

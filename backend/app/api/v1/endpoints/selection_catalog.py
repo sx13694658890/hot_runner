@@ -7,7 +7,7 @@ from typing import Annotated
 from urllib.parse import quote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,12 +17,16 @@ from app.database import get_db
 from app.deps import require_permissions
 from app.models.selection_catalog import (
     SelAssociationRule,
+    SelDictItem,
     SelHotRunnerSystem,
+    SelInjectionMachineModel,
+    SelInjectionMachineModelSpec,
     SelMaterial,
     SelMaterialProperty,
     SelMoldHotRunnerSpec,
     SelMoldInfo,
     SelNozzleConfig,
+    SelPlasticGrade,
     SelProductInfo,
     SelValvePinConfig,
 )
@@ -31,6 +35,9 @@ from app.schemas.selection_catalog import (
     SelAssociationRuleRead,
     SelHotRunnerSystemListRead,
     SelMaterialMasterRead,
+    SelInjectionMachineModelRead,
+    SelInjectionMachineModelSpecFlatRead,
+    SelInjectionMachineModelSpecRead,
     SelMaterialPropertyFlatRead,
     SelMaterialRead,
     SelMoldHotRunnerSpecListRead,
@@ -40,15 +47,18 @@ from app.schemas.selection_catalog import (
     SelMoldInfoPatch,
     SelMoldInfoRead,
     SelNozzleListRead,
+    SelPlasticGradeRead,
     SelProductInfoListRead,
     SelValvePinListRead,
 )
+from app.services.sel_material_serialize import sel_material_to_read
 from app.services.selection_catalog_service import (
     create_mold_bundle,
     get_mold_loaded,
     patch_mold_bundle,
 )
 from app.services.selection_dict_service import (
+    apply_mold_injection_machine_brand_sync,
     enrich_hrspec_flat_with_labels,
     enrich_mold_flat_with_labels,
     enrich_product_flat_with_labels,
@@ -97,9 +107,19 @@ async def _mold_to_read(db: AsyncSession, m: SelMoldInfo) -> SelMoldInfoRead:
     else:
         flat["hot_runner"] = None
     if m.material is not None:
-        flat["material"] = SelMaterialRead.model_validate(m.material)
+        flat["material"] = sel_material_to_read(m.material)
     else:
         flat["material"] = None
+    flat["injection_machine_catalog_label"] = None
+    flat["injection_machine_model_spec"] = None
+    cm = m.injection_machine_catalog_model
+    if cm is not None:
+        flat["injection_machine_catalog_label"] = cm.label
+        sp = cm.spec
+        if sp is not None:
+            flat["injection_machine_model_spec"] = SelInjectionMachineModelSpecRead.model_validate(
+                {c.key: getattr(sp, c.key) for c in SelInjectionMachineModelSpec.__table__.columns}
+            )
     return SelMoldInfoRead.model_validate(flat)
 
 
@@ -107,14 +127,16 @@ async def _mold_to_read(db: AsyncSession, m: SelMoldInfo) -> SelMoldInfoRead:
 async def list_materials(
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(require_permissions("selection:read"))],
-) -> list[SelMaterial]:
+) -> list[SelMaterialRead]:
     result = await db.execute(
         select(SelMaterial)
         .where(SelMaterial.is_active.is_(True))
-        .options(selectinload(SelMaterial.property_row))
+        .options(
+            selectinload(SelMaterial.plastic_grades).selectinload(SelPlasticGrade.property_row),
+        )
         .order_by(SelMaterial.abbreviation)
     )
-    return list(result.scalars().all())
+    return [sel_material_to_read(m) for m in result.scalars().all()]
 
 
 @router.get("/materials-master", response_model=list[SelMaterialMasterRead])
@@ -136,29 +158,128 @@ async def list_materials_master(
     return [SelMaterialMasterRead.model_validate(m) for m in result.scalars().all()]
 
 
+@router.get("/plastic-grades", response_model=list[SelPlasticGradeRead])
+async def list_plastic_grades(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("selection:read"))],
+    material_id: Annotated[UUID | None, Query(description="仅返回该材料下的塑料牌号；不传则返回全部启用材料下的牌号")] = None,
+    skip: int = 0,
+    limit: int = 200,
+) -> list[SelPlasticGradeRead]:
+    """塑料牌号字典 `sel_plastic_grade`；与材料主表多对一，供级联下拉等。"""
+    sk, lm = _paginate(skip, limit)
+    stmt = (
+        select(SelPlasticGrade)
+        .join(SelMaterial, SelPlasticGrade.material_id == SelMaterial.id)
+        .where(
+            SelPlasticGrade.is_active.is_(True),
+            SelMaterial.is_active.is_(True),
+        )
+    )
+    if material_id is not None:
+        stmt = stmt.where(SelPlasticGrade.material_id == material_id)
+    stmt = stmt.order_by(SelPlasticGrade.sort_order, SelPlasticGrade.label).offset(sk).limit(lm)
+    result = await db.execute(stmt)
+    return [SelPlasticGradeRead.model_validate(x) for x in result.scalars().all()]
+
+
 @router.get("/material-properties", response_model=list[SelMaterialPropertyFlatRead])
 async def list_material_properties_flat(
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(require_permissions("selection:read"))],
+    plastic_grade_id: Annotated[UUID | None, Query(description="仅返回该塑料牌号下的属性行（至多一条）")] = None,
     skip: int = 0,
     limit: int = 200,
 ) -> list[SelMaterialPropertyFlatRead]:
-    """材料属性表扁平行，附材料缩写。"""
+    """材料属性表扁平行，附塑料牌号与材料缩写。"""
     sk, lm = _paginate(skip, limit)
     stmt = (
-        select(SelMaterialProperty, SelMaterial.abbreviation)
-        .join(SelMaterial, SelMaterialProperty.material_id == SelMaterial.id)
+        select(SelMaterialProperty, SelPlasticGrade.label, SelMaterial.id, SelMaterial.abbreviation)
+        .join(SelPlasticGrade, SelMaterialProperty.plastic_grade_id == SelPlasticGrade.id)
+        .join(SelMaterial, SelPlasticGrade.material_id == SelMaterial.id)
         .where(SelMaterial.is_active.is_(True))
-        .order_by(SelMaterial.abbreviation)
+    )
+    if plastic_grade_id is not None:
+        stmt = stmt.where(SelMaterialProperty.plastic_grade_id == plastic_grade_id)
+    stmt = (
+        stmt.order_by(SelMaterial.abbreviation, SelPlasticGrade.sort_order, SelPlasticGrade.label)
         .offset(sk)
         .limit(lm)
     )
     result = await db.execute(stmt)
     out: list[SelMaterialPropertyFlatRead] = []
-    for prop, abbrev in result.all():
+    for prop, grade_label, material_id, abbrev in result.all():
         row = {c.key: getattr(prop, c.key) for c in SelMaterialProperty.__table__.columns}
+        row["plastic_grade_label"] = grade_label
+        row["material_id"] = material_id
         row["abbreviation"] = abbrev
         out.append(SelMaterialPropertyFlatRead.model_validate(row))
+    return out
+
+
+@router.get("/injection-machine-models", response_model=list[SelInjectionMachineModelRead])
+async def list_injection_machine_models(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("selection:read"))],
+    brand_dict_item_id: Annotated[
+        UUID | None, Query(description="仅返回该注塑机品牌（sel_dict_item）下的型号")
+    ] = None,
+    skip: int = 0,
+    limit: int = 500,
+) -> list[SelInjectionMachineModelRead]:
+    """注塑机型号目录；品牌引用字典分类 injection_machine_brand 下的项。"""
+    sk, lm = _paginate(skip, limit)
+    stmt = select(SelInjectionMachineModel).where(SelInjectionMachineModel.is_active.is_(True))
+    if brand_dict_item_id is not None:
+        stmt = stmt.where(SelInjectionMachineModel.brand_dict_item_id == brand_dict_item_id)
+    stmt = (
+        stmt.order_by(SelInjectionMachineModel.sort_order, SelInjectionMachineModel.label)
+        .offset(sk)
+        .limit(lm)
+    )
+    result = await db.execute(stmt)
+    return [SelInjectionMachineModelRead.model_validate(x) for x in result.scalars().all()]
+
+
+@router.get("/injection-machine-model-specs", response_model=list[SelInjectionMachineModelSpecFlatRead])
+async def list_injection_machine_model_specs_flat(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("selection:read"))],
+    model_id: Annotated[UUID | None, Query(description="仅返回该型号下的参数行（至多一条）")] = None,
+    skip: int = 0,
+    limit: int = 200,
+) -> list[SelInjectionMachineModelSpecFlatRead]:
+    """注塑机型号技术参数；与型号 1:1，类比 material-properties。"""
+    sk, lm = _paginate(skip, limit)
+    stmt = (
+        select(
+            SelInjectionMachineModelSpec,
+            SelInjectionMachineModel.label,
+            SelInjectionMachineModel.brand_dict_item_id,
+            SelDictItem.label,
+        )
+        .join(
+            SelInjectionMachineModel,
+            SelInjectionMachineModelSpec.model_id == SelInjectionMachineModel.id,
+        )
+        .join(SelDictItem, SelInjectionMachineModel.brand_dict_item_id == SelDictItem.id)
+        .where(SelInjectionMachineModel.is_active.is_(True))
+    )
+    if model_id is not None:
+        stmt = stmt.where(SelInjectionMachineModelSpec.model_id == model_id)
+    stmt = (
+        stmt.order_by(SelInjectionMachineModel.sort_order, SelInjectionMachineModel.label)
+        .offset(sk)
+        .limit(lm)
+    )
+    result = await db.execute(stmt)
+    out: list[SelInjectionMachineModelSpecFlatRead] = []
+    for spec, model_label, brand_item_id, brand_lbl in result.all():
+        row = {c.key: getattr(spec, c.key) for c in SelInjectionMachineModelSpec.__table__.columns}
+        row["model_label"] = model_label
+        row["brand_dict_item_id"] = brand_item_id
+        row["brand_label"] = brand_lbl
+        out.append(SelInjectionMachineModelSpecFlatRead.model_validate(row))
     return out
 
 
@@ -398,16 +519,18 @@ async def get_material_by_abbrev(
     abbreviation: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(require_permissions("selection:read"))],
-) -> SelMaterial:
+) -> SelMaterialRead:
     result = await db.execute(
         select(SelMaterial)
         .where(SelMaterial.abbreviation == abbreviation)
-        .options(selectinload(SelMaterial.property_row))
+        .options(
+            selectinload(SelMaterial.plastic_grades).selectinload(SelPlasticGrade.property_row),
+        )
     )
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="材料不存在")
-    return row
+    return sel_material_to_read(row)
 
 
 @router.get("/association-rules", response_model=list[SelAssociationRuleRead])
@@ -441,6 +564,8 @@ async def list_mold_infos(
             "product": None,
             "hot_runner": None,
             "material": None,
+            "injection_machine_catalog_label": None,
+            "injection_machine_model_spec": None,
         }
         await enrich_mold_flat_with_labels(db, flat)
         out.append(SelMoldInfoRead.model_validate(flat))
@@ -466,11 +591,12 @@ async def create_mold_info(
     _: Annotated[User, Depends(require_permissions("selection:write"))],
 ) -> SelMoldInfoRead:
     flat = body.model_dump(exclude={"product", "hot_runner"})
+    await apply_mold_injection_machine_brand_sync(db, flat)
     await validate_mold_dict_fk_payload(db, flat)
     await validate_mold_material_fk_payload(db, flat)
     if body.product is not None:
         await validate_product_dict_fk_payload(db, body.product.model_dump())
-    m = await create_mold_bundle(db, body)
+    m = await create_mold_bundle(db, body, root_flat=flat)
     loaded = await get_mold_loaded(db, m.id)
     assert loaded is not None
     return await _mold_to_read(db, loaded)
@@ -487,11 +613,12 @@ async def patch_mold_info(
     if m is None:
         raise HTTPException(status_code=404, detail="模具记录不存在")
     patch_flat = body.model_dump(exclude={"product", "hot_runner"}, exclude_unset=True)
+    await apply_mold_injection_machine_brand_sync(db, patch_flat)
     await validate_mold_dict_fk_payload(db, patch_flat)
     await validate_mold_material_fk_payload(db, patch_flat)
     if body.product is not None:
         await validate_product_dict_fk_payload(db, body.product.model_dump(exclude_unset=True))
-    await patch_mold_bundle(db, m, body)
+    await patch_mold_bundle(db, m, body, root_flat=patch_flat)
     loaded = await get_mold_loaded(db, mold_id)
     assert loaded is not None
     return await _mold_to_read(db, loaded)

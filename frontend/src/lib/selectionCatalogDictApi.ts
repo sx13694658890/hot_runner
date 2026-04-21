@@ -11,6 +11,12 @@ export async function fetchHotRunnerSpecDictBundle(): Promise<MoldDictBundleResp
   return b.categories;
 }
 
+/** GET …/dict/wizard-cae-flow-options — 选型向导第 5 步模流/流道直径（code 前缀 sel_wizard_cae_） */
+export async function fetchWizardCaeFlowDictBundle(): Promise<MoldDictBundleResponse["categories"]> {
+  const b = await apiFetch<MoldDictBundleResponse>("/selection-catalog/dict/wizard-cae-flow-options");
+  return b.categories;
+}
+
 /** GET …/dict/manifold-detail-options — 分流板大类截图/Excel 扩展字典（code 前缀 hrspec_mfld_） */
 export async function fetchManifoldDetailDictBundle(): Promise<MoldDictBundleResponse["categories"]> {
   const b = await apiFetch<MoldDictBundleResponse>("/selection-catalog/dict/manifold-detail-options");

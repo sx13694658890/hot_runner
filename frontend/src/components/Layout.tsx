@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { to: "/field", label: "工艺与现场", perm: "field:read" },
   { to: "/integration", label: "ERP/BOM集成", perm: "integration:read" },
   { to: "/selection-catalog", label: "选型领域表", perm: "selection:read" },
+  { to: "/selection-catalog/wizard", label: "选型向导", perm: "selection:read" },
   { to: "/selection-catalog/molds", label: "模具档案", perm: "selection:read" },
   { to: "/selection-catalog/hot-runners", label: "热流道列表", perm: "selection:read" },
   { to: "/selection-catalog/dict", label: "选型字典", perm: "selection:read" },

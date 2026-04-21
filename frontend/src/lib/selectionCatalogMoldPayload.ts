@@ -33,6 +33,7 @@ const ROOT_KEYS_DICT_UUID: (keyof SelMoldInfoRead)[] = [
   "locating_ring_eccentric_id",
   "order_requirement_id",
   "hot_runner_type_id",
+  "hot_runner_system_ownership_id",
   "point_numbering_rule_id",
   "driver_type_id",
   "solenoid_valve_id",
@@ -54,7 +55,12 @@ const ROOT_KEYS_DICT_UUID: (keyof SelMoldInfoRead)[] = [
   "thermocouple_type_id",
   "delivery_wiring_method_id",
   "debug_wiring_method_id",
+  "injection_machine_brand_id",
+  "customer_equipment_library_id",
 ];
+
+/** 注塑机型号目录 UUID（非 mold-options，见 GET …/injection-machine-models） */
+const ROOT_KEYS_INJECTION_CATALOG_UUID: (keyof SelMoldInfoRead)[] = ["injection_machine_model_id"];
 
 export const MOLD_ROOT_DICT_FIELD_KEYS = new Set<string>(
   ROOT_KEYS_DICT_UUID as unknown as string[],
@@ -125,6 +131,7 @@ export function emptyMoldForm(): MoldAggregateFormState {
   const root: Record<string, string> = {};
   for (const k of ROOT_KEYS_FREE_TEXT) root[k as string] = "";
   for (const k of ROOT_KEYS_DICT_UUID) root[k as string] = "";
+  for (const k of ROOT_KEYS_INJECTION_CATALOG_UUID) root[k as string] = "";
   for (const k of ROOT_KEYS_INT) root[k as string] = "";
   for (const k of ROOT_KEYS_DEC) root[k as string] = "";
   const rootBool: Record<string, TriBool> = {};
@@ -149,6 +156,7 @@ export function moldReadToForm(m: SelMoldInfoRead): MoldAggregateFormState {
   base.materialId = m.material_id ? String(m.material_id) : "";
   for (const k of ROOT_KEYS_FREE_TEXT) base.root[k as string] = s(m[k]);
   for (const k of ROOT_KEYS_DICT_UUID) base.root[k as string] = s(m[k]);
+  for (const k of ROOT_KEYS_INJECTION_CATALOG_UUID) base.root[k as string] = s(m[k]);
   for (const k of ROOT_KEYS_INT) base.root[k as string] = m[k] == null ? "" : String(m[k]);
   for (const k of ROOT_KEYS_DEC) base.root[k as string] = s(m[k]);
   for (const k of ROOT_KEYS_BOOL) base.rootBool[k as string] = triFromBool(m[k] as boolean | null);
@@ -173,6 +181,12 @@ function buildRootPayload(st: MoldAggregateFormState, forPatch: boolean): Record
   for (const k of ROOT_KEYS_DICT_UUID) {
     const v = st.root[k as string]?.trim();
     if (v) o[k as string] = v;
+  }
+  const imCatalog = st.root.injection_machine_model_id?.trim() ?? "";
+  if (imCatalog) {
+    o.injection_machine_model_id = imCatalog;
+  } else if (forPatch) {
+    o.injection_machine_model_id = null;
   }
   for (const k of ROOT_KEYS_INT) {
     const n = parseOptionalInt(st.root[k as string] ?? "");
@@ -286,7 +300,6 @@ export const MOLD_ROOT_FIELD_META: {
   ["thermocouple_type_id", "感温线型号", "text"],
   ["delivery_wiring_method_id", "交付接线方式", "text"],
   ["debug_wiring_method_id", "调机接线方式", "text"],
-  ["injection_machine_model", "注塑机型号", "text"],
   ["injection_machine_tonnage", "注塑机吨位(t)", "int"],
   ["barrel_sphere_radius", "炮筒球半径(mm)", "dec"],
   ["barrel_orifice", "炮筒出胶孔(mm)", "dec"],
@@ -295,6 +308,13 @@ export const MOLD_ROOT_FIELD_META: {
   label,
   kind: kind as "text" | "int" | "dec" | "tri",
 }));
+
+/** 已由「注塑机品牌→型号→参数」卡片单独渲染，勿在大网格重复 */
+export const MOLD_ROOT_INJECTION_METAS_EXCLUDED = new Set<string>([
+  "injection_machine_brand_id",
+  "customer_equipment_library_id",
+  "injection_machine_model",
+]);
 
 /** 字典字段 meta.key → mold-options 分类 code（去掉末尾 _id） */
 export function moldDictCategoryCode(fieldKey: string): string {
@@ -314,6 +334,97 @@ export function productDictCategoryCode(fieldKey: string): string {
     production_batch_id: "product_production_batch",
   };
   return map[fieldKey] ?? moldDictCategoryCode(fieldKey);
+}
+
+/** 选型向导第 3 步：与模具根表字段对齐；板厚与旧模改制勾选项为向导扩展键（后续落库可映射） */
+export const WIZARD_MOLD_ROOT_STRING_KEYS = [
+  "mold_id",
+  "mold_status_id",
+  "mold_type_id",
+  "locating_ring_eccentric_id",
+  "runner_plate_style_id",
+  "cooling_medium_id",
+  "water_oil_connector_position_id",
+  "has_temp_controller_id",
+  "has_sequence_controller_id",
+  "has_booster_pump_id",
+  "has_multiple_oil_pumps_id",
+  "wizard_cylinder_plate_thickness",
+  "wizard_hot_runner_plate_thickness",
+  "wizard_disallow_add_iron",
+  "wizard_disallow_reduce_iron",
+  "injection_machine_brand_id",
+  "injection_machine_model_id",
+  "customer_equipment_library_id",
+  "hot_runner_id",
+  "nozzle_count",
+  "hot_runner_type_id",
+  "gate_system_desc_id",
+  "hot_runner_system_ownership_id",
+  "point_numbering_rule_id",
+  "driver_type_id",
+  "solenoid_valve_id",
+  "solenoid_valve_socket_id",
+  "signal_wiring_method_id",
+  "junction_box_position_id",
+  "socket_type_id",
+  "socket_pin_count_id",
+  "thermocouple_type_id",
+  "delivery_wiring_method_id",
+  "debug_wiring_method_id",
+  "wizard_valve_pin_style_id",
+  /** 第 5 步模流/流道直径（选型字典 UUID，仅存向导草稿） */
+  "wizard_cae_main_nozzle_channel_diameter_id",
+  "wizard_cae_bridge_channel_diameter_id",
+  "wizard_cae_manifold_runner_diameter_id",
+  "wizard_cae_normal_hot_nozzle_structure_id",
+  "wizard_cae_hot_nozzle_runner_diameter_id",
+  "wizard_cae_gate_diameter_id",
+] as const;
+
+export const WIZARD_MOLD_TRIBOOL_KEYS = [
+  "mold_core_eject",
+  "plate_thickness_adjustable",
+  "has_mold_temp_controller",
+  "wire_frame_needed",
+] as const;
+
+export type WizardMoldForm = {
+  root: Record<string, string>;
+  rootBool: Record<string, TriBool>;
+};
+
+export function emptyWizardMold(): WizardMoldForm {
+  const root: Record<string, string> = {};
+  for (const k of WIZARD_MOLD_ROOT_STRING_KEYS) root[k] = "";
+  const rootBool: Record<string, TriBool> = {};
+  for (const k of WIZARD_MOLD_TRIBOOL_KEYS) rootBool[k] = "";
+  return { root, rootBool };
+}
+
+/** 向导里与模具编辑页文案略有不同的标签 */
+export const WIZARD_MOLD_LABEL_OVERRIDES: Partial<Record<string, string>> = {
+  wizard_cylinder_plate_thickness: "气缸板厚度",
+  wizard_hot_runner_plate_thickness: "热流道板厚度",
+  has_temp_controller_id: "客户是否有温控箱",
+  injection_machine_brand_id: "注塑机品牌",
+  injection_machine_model_id: "注塑机型号",
+  customer_equipment_library_id: "客户设备库",
+  runner_plate_style_id: "分流板描述",
+  hot_runner_system_ownership_id: "热流道系统所有权",
+  wizard_valve_pin_style_id: "阀针样式",
+  wizard_cae_main_nozzle_channel_diameter_id: "主射咀流道直径",
+  wizard_cae_bridge_channel_diameter_id: "桥流道直径",
+  wizard_cae_manifold_runner_diameter_id: "主分流板流道直径",
+  wizard_cae_normal_hot_nozzle_structure_id: "法向热咀",
+  wizard_cae_hot_nozzle_runner_diameter_id: "热咀流道直径",
+  wizard_cae_gate_diameter_id: "胶口直径",
+};
+
+export function wizardMoldFieldLabel(key: string): string {
+  if (WIZARD_MOLD_LABEL_OVERRIDES[key]) return WIZARD_MOLD_LABEL_OVERRIDES[key]!;
+  const fromMeta = MOLD_ROOT_FIELD_META.find((m) => m.key === key);
+  return fromMeta?.label ?? key;
 }
 
 export const PRODUCT_FIELD_META: { key: string; label: string; kind: "text" | "dec" | "dict" }[] = [

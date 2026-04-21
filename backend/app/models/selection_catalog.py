@@ -76,13 +76,37 @@ class SelMaterial(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    property_row: Mapped[SelMaterialProperty | None] = relationship(
+    mold_infos: Mapped[list["SelMoldInfo"]] = relationship(back_populates="material")
+
+    plastic_grades: Mapped[list["SelPlasticGrade"]] = relationship(
         back_populates="material",
+        order_by="SelPlasticGrade.sort_order",
+    )
+
+
+class SelPlasticGrade(Base):
+    """塑料牌号字典；与材料主表多对一（同一材质下多牌号，后续可扩展更多业务关联）。"""
+
+    __tablename__ = "sel_plastic_grade"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    material_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sel_material.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    material: Mapped[SelMaterial] = relationship(back_populates="plastic_grades")
+    property_row: Mapped["SelMaterialProperty | None"] = relationship(
+        back_populates="plastic_grade",
         cascade="all, delete-orphan",
         uselist=False,
     )
-
-    mold_infos: Mapped[list["SelMoldInfo"]] = relationship(back_populates="material")
 
 
 class SelMaterialProperty(Base):
@@ -91,9 +115,9 @@ class SelMaterialProperty(Base):
     __tablename__ = "sel_material_property"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    material_id: Mapped[uuid.UUID] = mapped_column(
+    plastic_grade_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("sel_material.id", ondelete="CASCADE"),
+        ForeignKey("sel_plastic_grade.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     )
@@ -112,7 +136,63 @@ class SelMaterialProperty(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    material: Mapped[SelMaterial] = relationship(back_populates="property_row")
+    plastic_grade: Mapped["SelPlasticGrade"] = relationship(back_populates="property_row")
+
+
+class SelInjectionMachineModel(Base):
+    """注塑机型号目录；品牌引用选型字典项 injection_machine_brand（sel_dict_item）。"""
+
+    __tablename__ = "sel_injection_machine_model"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    brand_dict_item_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sel_dict_item.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    spec: Mapped["SelInjectionMachineModelSpec | None"] = relationship(
+        back_populates="model",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+
+
+class SelInjectionMachineModelSpec(Base):
+    """注塑机型号技术参数（与型号 1:1，类比 sel_material_property 与塑料牌号）。"""
+
+    __tablename__ = "sel_injection_machine_model_spec"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    model_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sel_injection_machine_model.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+
+    clamp_force_ton: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    screw_diameter_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    injection_weight_g: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    tie_bar_horizontal_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    tie_bar_vertical_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    min_mold_thickness_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    max_mold_thickness_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    max_opening_stroke_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    max_injection_pressure_mpa: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    nozzle_sphere_radius_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    platen_horizontal_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    platen_vertical_mm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
+    remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    model: Mapped["SelInjectionMachineModel"] = relationship(back_populates="spec")
 
 
 class SelMoldInfo(Base):
@@ -143,6 +223,9 @@ class SelMoldInfo(Base):
         UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
     )
     hot_runner_type_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
+    )
+    hot_runner_system_ownership_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
     )
     point_numbering_rule_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -216,6 +299,18 @@ class SelMoldInfo(Base):
         UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
     )
 
+    injection_machine_brand_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
+    )
+    injection_machine_model_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("sel_injection_machine_model.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    customer_equipment_library_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("sel_dict_item.id", ondelete="RESTRICT"), nullable=True
+    )
+
     injection_machine_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     injection_machine_tonnage: Mapped[int | None] = mapped_column(Integer, nullable=True)
     barrel_sphere_radius: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
@@ -233,6 +328,10 @@ class SelMoldInfo(Base):
     )
 
     material: Mapped[SelMaterial | None] = relationship(back_populates="mold_infos")
+    injection_machine_catalog_model: Mapped["SelInjectionMachineModel | None"] = relationship(
+        "SelInjectionMachineModel",
+        foreign_keys=[injection_machine_model_id],
+    )
 
     product: Mapped[SelProductInfo | None] = relationship(
         back_populates="mold",

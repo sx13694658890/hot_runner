@@ -164,6 +164,7 @@ class SelMoldInfoWrite(BaseModel):
     locating_ring_eccentric_id: UUID | None = None
     order_requirement_id: UUID | None = None
     hot_runner_type_id: UUID | None = None
+    hot_runner_system_ownership_id: UUID | None = None
     point_numbering_rule_id: UUID | None = None
     driver_type_id: UUID | None = None
     solenoid_valve_id: UUID | None = None
@@ -189,6 +190,9 @@ class SelMoldInfoWrite(BaseModel):
     thermocouple_type_id: UUID | None = None
     delivery_wiring_method_id: UUID | None = None
     debug_wiring_method_id: UUID | None = None
+    injection_machine_brand_id: UUID | None = None
+    injection_machine_model_id: UUID | None = None
+    customer_equipment_library_id: UUID | None = None
     injection_machine_model: str | None = None
     injection_machine_tonnage: int | None = None
     barrel_sphere_radius: Decimal | None = None
@@ -227,6 +231,8 @@ class SelMoldInfoRead(ORMModel):
     order_requirement_label: str | None = None
     hot_runner_type_id: UUID | None
     hot_runner_type_label: str | None = None
+    hot_runner_system_ownership_id: UUID | None = None
+    hot_runner_system_ownership_label: str | None = None
     point_numbering_rule_id: UUID | None
     point_numbering_rule_label: str | None = None
     driver_type_id: UUID | None
@@ -273,6 +279,12 @@ class SelMoldInfoRead(ORMModel):
     delivery_wiring_method_label: str | None = None
     debug_wiring_method_id: UUID | None
     debug_wiring_method_label: str | None = None
+    injection_machine_brand_id: UUID | None
+    injection_machine_brand_label: str | None = None
+    injection_machine_model_id: UUID | None = None
+    customer_equipment_library_id: UUID | None = None
+    customer_equipment_library_label: str | None = None
+    injection_machine_catalog_label: str | None = None
     injection_machine_model: str | None
     injection_machine_tonnage: int | None
     barrel_sphere_radius: Decimal | None
@@ -283,6 +295,7 @@ class SelMoldInfoRead(ORMModel):
     material: SelMaterialRead | None = None
     product: SelProductInfoRead | None = None
     hot_runner: SelHotRunnerRead | None = None
+    injection_machine_model_spec: SelInjectionMachineModelSpecRead | None = None
 
 
 class SelAssociationRuleRead(ORMModel):
@@ -309,12 +322,65 @@ class SelMaterialMasterRead(ORMModel):
     created_at: datetime
 
 
-class SelMaterialPropertyFlatRead(SelMaterialPropertyRead):
-    """材料属性表 + 关联缩写"""
+class SelPlasticGradeRead(ORMModel):
+    """塑料牌号 sel_plastic_grade；与材料主表 material_id 多对一"""
 
+    id: UUID
+    material_id: UUID
+    label: str
+    sort_order: int
+    is_active: bool
+    created_at: datetime
+
+
+class SelMaterialPropertyFlatRead(SelMaterialPropertyRead):
+    """材料属性表 + 塑料牌号与材料缩写（属性行归属 plastic_grade_id）"""
+
+    plastic_grade_id: UUID
+    plastic_grade_label: str
     material_id: UUID
     abbreviation: str
     created_at: datetime | None = None
+
+
+class SelInjectionMachineModelRead(ORMModel):
+    """注塑机型号目录 sel_injection_machine_model；品牌为字典项 id。"""
+
+    id: UUID
+    brand_dict_item_id: UUID
+    label: str
+    sort_order: int
+    is_active: bool
+    created_at: datetime
+
+
+class SelInjectionMachineModelSpecRead(ORMModel):
+    """注塑机型号技术参数（与型号 1:1）"""
+
+    id: UUID
+    model_id: UUID
+    clamp_force_ton: int | None
+    screw_diameter_mm: Decimal | None
+    injection_weight_g: Decimal | None
+    tie_bar_horizontal_mm: Decimal | None
+    tie_bar_vertical_mm: Decimal | None
+    min_mold_thickness_mm: Decimal | None
+    max_mold_thickness_mm: Decimal | None
+    max_opening_stroke_mm: Decimal | None
+    max_injection_pressure_mpa: Decimal | None
+    nozzle_sphere_radius_mm: Decimal | None
+    platen_horizontal_mm: Decimal | None
+    platen_vertical_mm: Decimal | None
+    remarks: str | None
+    created_at: datetime
+
+
+class SelInjectionMachineModelSpecFlatRead(SelInjectionMachineModelSpecRead):
+    """机型参数 + 型号名与品牌字典标签（便于前端只读展示）"""
+
+    model_label: str
+    brand_dict_item_id: UUID
+    brand_label: str | None = None
 
 
 class SelProductInfoListRead(SelProductInfoRead):

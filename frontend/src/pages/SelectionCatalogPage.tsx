@@ -12,6 +12,7 @@ import type {
   SelValvePinListRead,
 } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
+import { SelectionWizardDraftBanner } from "@/features/selection-catalog/SelectionWizardDraftBanner";
 
 type TabId =
   | "materialsMaster"
@@ -245,6 +246,8 @@ export function SelectionCatalogPage() {
         </Typography.Paragraph>
       </div>
 
+      <SelectionWizardDraftBanner />
+
       {err ? <Alert type="error" showIcon message={err} /> : null}
 
       <Tabs
@@ -327,6 +330,13 @@ export function SelectionCatalogPage() {
                   fixed: "left",
                   width: 120,
                   render: (abbr: string) => <Typography.Text code>{abbr}</Typography.Text>,
+                },
+                {
+                  title: "塑料牌号",
+                  dataIndex: "plastic_grade_label",
+                  key: "plastic_grade_label",
+                  width: 160,
+                  render: (v: unknown) => dashCell(v),
                 },
                 {
                   title: "模温℃",

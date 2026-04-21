@@ -103,6 +103,18 @@ async def get_hot_nozzle_detail_dict_bundle(
     return MoldDictBundleRead(categories=bundle)
 
 
+@router.get("/dict/wizard-cae-flow-options", response_model=MoldDictBundleRead)
+async def get_wizard_cae_flow_dict_bundle(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(require_permissions("selection:read"))],
+) -> MoldDictBundleRead:
+    """选型向导第 5 步：主射咀/桥/分流板/热咀流道直径、法向热咀、胶口直径（sel_wizard_cae_*）。"""
+    from app.services.selection_dict_service import list_wizard_cae_flow_dict_options_bundle
+
+    bundle = await list_wizard_cae_flow_dict_options_bundle(db)
+    return MoldDictBundleRead(categories=bundle)
+
+
 @router.get("/dict/drive-system-detail-options", response_model=MoldDictBundleRead)
 async def get_drive_system_detail_dict_bundle(
     db: Annotated[AsyncSession, Depends(get_db)],

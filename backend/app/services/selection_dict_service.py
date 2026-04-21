@@ -12,9 +12,15 @@ from app.constants.sel_drive_system_detail_dict import DRIVE_SYSTEM_DETAIL_CATEG
 from app.constants.sel_hot_nozzle_detail_dict import HOT_NOZZLE_DETAIL_CATEGORY_CODES
 from app.constants.sel_main_nozzle_detail_dict import MAIN_NOZZLE_DETAIL_CATEGORY_CODES
 from app.constants.sel_manifold_detail_dict import MANIFOLD_DETAIL_CATEGORY_CODES
+from app.constants.sel_wizard_cae_flow_dict import WIZARD_CAE_FLOW_CATEGORY_CODES
 from app.constants.sel_mold_dict import MOLD_DICT_COLUMN_TO_CATEGORY
 from app.constants.sel_product_dict import PRODUCT_DICT_COLUMN_TO_CATEGORY
-from app.models.selection_catalog import SelDictCategory, SelDictItem, SelMaterial
+from app.models.selection_catalog import (
+    SelDictCategory,
+    SelDictItem,
+    SelInjectionMachineModel,
+    SelMaterial,
+)
 
 
 async def validate_mold_material_fk_payload(db: AsyncSession, flat: dict) -> None:
@@ -216,6 +222,24 @@ async def list_hot_nozzle_detail_dict_options_bundle(db: AsyncSession) -> dict[s
     return bundle
 
 
+async def list_wizard_cae_flow_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
+    """选型向导第 5 步模流/流道直径（code 前缀 sel_wizard_cae_）→ 选项列表，仅启用项。"""
+    stmt = (
+        select(SelDictCategory.code, SelDictItem.id, SelDictItem.label, SelDictItem.sort_order)
+        .join(SelDictItem, SelDictItem.category_id == SelDictCategory.id)
+        .where(
+            SelDictCategory.code.in_(WIZARD_CAE_FLOW_CATEGORY_CODES),
+            SelDictItem.is_active.is_(True),
+        )
+        .order_by(SelDictCategory.sort_order, SelDictItem.sort_order, SelDictItem.label)
+    )
+    rows = (await db.execute(stmt)).all()
+    bundle: dict[str, list[dict[str, object]]] = {}
+    for code, iid, lbl, so in rows:
+        bundle.setdefault(code, []).append({"id": iid, "label": lbl, "sort_order": so})
+    return bundle
+
+
 async def list_drive_system_detail_dict_options_bundle(db: AsyncSession) -> dict[str, list[dict[str, object]]]:
     """驱动系统截图/Excel 扩展字典（code 前缀 hrspec_drv_）→ 选项列表，仅启用项。"""
     stmt = (
@@ -250,3 +274,21 @@ async def enrich_hrspec_flat_with_labels(db: AsyncSession, flat: dict) -> dict:
         else:
             flat[lk] = label_map.get(uid)
     return flat
+
+
+async def apply_mold_injection_machine_brand_sync(db: AsyncSession, flat: dict) -> None:
+    """若 flat 含 injection_machine_model_id 且非空，则校验机型并将品牌 id 同步为该机型在字典中的品牌项。"""
+    from fastapi import HTTPException, status
+
+    if "injection_machine_model_id" not in flat:
+        return
+    mid = flat.get("injection_machine_model_id")
+    if mid is None:
+        return
+    row = await db.get(SelInjectionMachineModel, mid)
+    if row is None or not row.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="注塑机型号不存在或已停用",
+        )
+    flat["injection_machine_brand_id"] = row.brand_dict_item_id

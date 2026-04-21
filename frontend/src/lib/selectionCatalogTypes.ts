@@ -33,8 +33,20 @@ export interface SelMaterialMasterRead {
   created_at: string;
 }
 
+/** GET /selection-catalog/plastic-grades */
+export interface SelPlasticGradeRead {
+  id: UUID;
+  material_id: UUID;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 /** GET /selection-catalog/material-properties */
 export interface SelMaterialPropertyFlatRead extends SelMaterialPropertyRead {
+  plastic_grade_id: UUID;
+  plastic_grade_label: string;
   material_id: UUID;
   abbreviation: string;
   created_at?: string | null;
@@ -268,6 +280,8 @@ export interface SelMoldInfoRead {
   order_requirement_label: string | null;
   hot_runner_type_id: UUID | null;
   hot_runner_type_label: string | null;
+  hot_runner_system_ownership_id: UUID | null;
+  hot_runner_system_ownership_label: string | null;
   point_numbering_rule_id: UUID | null;
   point_numbering_rule_label: string | null;
   driver_type_id: UUID | null;
@@ -314,6 +328,12 @@ export interface SelMoldInfoRead {
   delivery_wiring_method_label: string | null;
   debug_wiring_method_id: UUID | null;
   debug_wiring_method_label: string | null;
+  injection_machine_brand_id: UUID | null;
+  injection_machine_brand_label: string | null;
+  injection_machine_model_id: UUID | null;
+  customer_equipment_library_id: UUID | null;
+  customer_equipment_library_label: string | null;
+  injection_machine_catalog_label: string | null;
   injection_machine_model: string | null;
   injection_machine_tonnage: number | null;
   barrel_sphere_radius: string | null;
@@ -325,6 +345,44 @@ export interface SelMoldInfoRead {
   material: SelMaterialRead | null;
   product: SelProductInfoRead | null;
   hot_runner: SelHotRunnerRead | null;
+  injection_machine_model_spec: SelInjectionMachineModelSpecRead | null;
+}
+
+/** GET …/injection-machine-models */
+export interface SelInjectionMachineModelRead {
+  id: UUID;
+  brand_dict_item_id: UUID;
+  label: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+/** 机型参数（与后端 SelInjectionMachineModelSpecRead 对齐） */
+export interface SelInjectionMachineModelSpecRead {
+  id: UUID;
+  model_id: UUID;
+  clamp_force_ton: number | null;
+  screw_diameter_mm: string | null;
+  injection_weight_g: string | null;
+  tie_bar_horizontal_mm: string | null;
+  tie_bar_vertical_mm: string | null;
+  min_mold_thickness_mm: string | null;
+  max_mold_thickness_mm: string | null;
+  max_opening_stroke_mm: string | null;
+  max_injection_pressure_mpa: string | null;
+  nozzle_sphere_radius_mm: string | null;
+  platen_horizontal_mm: string | null;
+  platen_vertical_mm: string | null;
+  remarks: string | null;
+  created_at: string;
+}
+
+/** GET …/injection-machine-model-specs（扁平行 + 型号名、品牌） */
+export interface SelInjectionMachineModelSpecFlatRead extends SelInjectionMachineModelSpecRead {
+  model_label: string;
+  brand_dict_item_id: UUID;
+  brand_label: string | null;
 }
 
 /** GET /selection-catalog/dict/mold-options 与 dict/hot-runner-spec-options（结构相同） */

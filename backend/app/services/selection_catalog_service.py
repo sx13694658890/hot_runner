@@ -8,17 +8,21 @@ from sqlalchemy.orm import selectinload
 
 from app.models.selection_catalog import (
     SelHotRunnerSystem,
+    SelInjectionMachineModel,
     SelMaterial,
     SelMoldInfo,
     SelNozzleConfig,
+    SelPlasticGrade,
     SelProductInfo,
     SelValvePinConfig,
 )
 from app.schemas.selection_catalog import SelHotRunnerWrite, SelMoldInfoCreate, SelMoldInfoPatch
 
 
-async def create_mold_bundle(db: AsyncSession, body: SelMoldInfoCreate) -> SelMoldInfo:
-    flat = body.model_dump(exclude={"product", "hot_runner"})
+async def create_mold_bundle(
+    db: AsyncSession, body: SelMoldInfoCreate, *, root_flat: dict | None = None
+) -> SelMoldInfo:
+    flat = root_flat if root_flat is not None else body.model_dump(exclude={"product", "hot_runner"})
     mold = SelMoldInfo(**flat)
     db.add(mold)
     await db.flush()
@@ -45,8 +49,14 @@ async def _add_hot_runner(db: AsyncSession, mold_info_id, hr: SelHotRunnerWrite)
         db.add(SelValvePinConfig(hot_runner_id=sys.id, **hr.valve_pin.model_dump(exclude_unset=True)))
 
 
-async def patch_mold_bundle(db: AsyncSession, mold: SelMoldInfo, body: SelMoldInfoPatch) -> SelMoldInfo:
-    flat = body.model_dump(exclude={"product", "hot_runner"}, exclude_unset=True)
+async def patch_mold_bundle(
+    db: AsyncSession, mold: SelMoldInfo, body: SelMoldInfoPatch, *, root_flat: dict | None = None
+) -> SelMoldInfo:
+    flat = (
+        root_flat
+        if root_flat is not None
+        else body.model_dump(exclude={"product", "hot_runner"}, exclude_unset=True)
+    )
     for k, v in flat.items():
         setattr(mold, k, v)
 
@@ -75,7 +85,12 @@ async def get_mold_loaded(db: AsyncSession, mold_id) -> SelMoldInfo | None:
         select(SelMoldInfo)
         .where(SelMoldInfo.id == mold_id)
         .options(
-            selectinload(SelMoldInfo.material).selectinload(SelMaterial.property_row),
+            selectinload(SelMoldInfo.material).selectinload(SelMaterial.plastic_grades).selectinload(
+                SelPlasticGrade.property_row
+            ),
+            selectinload(SelMoldInfo.injection_machine_catalog_model).selectinload(
+                SelInjectionMachineModel.spec
+            ),
             selectinload(SelMoldInfo.product),
             selectinload(SelMoldInfo.hot_runner).selectinload(SelHotRunnerSystem.nozzles),
             selectinload(SelMoldInfo.hot_runner).selectinload(SelHotRunnerSystem.valve_pin),
