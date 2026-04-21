@@ -94,67 +94,119 @@ async def main() -> None:
 
         perm_map: dict[str, uuid.UUID] = {}
         for code, name, module in PERMISSIONS:
+            perm_id = await db.scalar(select(Permission.id).where(Permission.code == code))
+            if perm_id is not None:
+                perm_map[code] = perm_id
+                continue
             p = Permission(code=code, name=name, module=module)
             db.add(p)
             await db.flush()
             perm_map[code] = p.id
 
+        designer_role = await db.scalar(select(Role).where(Role.code == "designer"))
+        if designer_role is None:
+            designer_role = Role(
+                name="设计工程师", code="designer", description="M0 受限演示角色"
+            )
+            db.add(designer_role)
+
         admin_role = Role(
             name="系统管理员", code="admin", description="M0 全权限演示角色"
         )
-        designer_role = Role(
-            name="设计工程师", code="designer", description="M0 受限演示角色"
-        )
-        db.add_all([admin_role, designer_role])
+        db.add(admin_role)
         await db.flush()
 
-        for pid in perm_map.values():
-            db.add(RolePermission(role_id=admin_role.id, permission_id=pid))
-        for code in DESIGNER_CODES:
-            db.add(RolePermission(role_id=designer_role.id, permission_id=perm_map[code]))
-
-        dept = Department(name="技术中心", code="ROOT-TECH", parent_id=None, sort_order=0)
-        db.add(dept)
-        await db.flush()
-
-        pos = Position(name="高级工程师", code="SR-ENG", department_id=dept.id)
-        db.add(pos)
-        await db.flush()
-
-        admin_user = User(
-            username="admin",
-            email="admin@example.com",
-            hashed_password=hash_password("Admin123456"),
-            full_name="系统管理员",
-            is_active=True,
-            is_superuser=True,
-            department_id=dept.id,
-            position_id=pos.id,
-        )
-        designer_user = User(
-            username="designer",
-            email="designer@example.com",
-            hashed_password=hash_password("Designer123456"),
-            full_name="演示设计工程师",
-            is_active=True,
-            is_superuser=False,
-            department_id=dept.id,
-            position_id=pos.id,
-        )
-        db.add_all([admin_user, designer_user])
-        await db.flush()
-
-        db.add(UserRole(user_id=admin_user.id, role_id=admin_role.id))
-        db.add(UserRole(user_id=designer_user.id, role_id=designer_role.id))
-
-        proj = Project(name="演示项目", code="DEMO-001", status="active")
-        db.add(proj)
-        await db.flush()
-        db.add(
-            ProjectMember(
-                project_id=proj.id, user_id=designer_user.id, role_in_project="member"
+        rp_rows = await db.execute(
+            select(RolePermission.role_id, RolePermission.permission_id).where(
+                RolePermission.role_id.in_([admin_role.id, designer_role.id])
             )
         )
+        existing_rp = {(r, p) for r, p in rp_rows.all()}
+
+        for pid in perm_map.values():
+            if (admin_role.id, pid) not in existing_rp:
+                db.add(RolePermission(role_id=admin_role.id, permission_id=pid))
+        for code in DESIGNER_CODES:
+            pid = perm_map[code]
+            if (designer_role.id, pid) not in existing_rp:
+                db.add(RolePermission(role_id=designer_role.id, permission_id=pid))
+
+        dept = await db.scalar(select(Department).where(Department.code == "ROOT-TECH"))
+        if dept is None:
+            dept = Department(name="技术中心", code="ROOT-TECH", parent_id=None, sort_order=0)
+            db.add(dept)
+            await db.flush()
+
+        pos = await db.scalar(select(Position).where(Position.code == "SR-ENG"))
+        if pos is None:
+            pos = Position(name="高级工程师", code="SR-ENG", department_id=dept.id)
+            db.add(pos)
+            await db.flush()
+
+        admin_user = await db.scalar(select(User).where(User.username == "admin"))
+        if admin_user is None:
+            admin_user = User(
+                username="admin",
+                email="admin@example.com",
+                hashed_password=hash_password("Admin123456"),
+                full_name="系统管理员",
+                is_active=True,
+                is_superuser=True,
+                department_id=dept.id,
+                position_id=pos.id,
+            )
+            db.add(admin_user)
+
+        designer_user = await db.scalar(select(User).where(User.username == "designer"))
+        if designer_user is None:
+            designer_user = User(
+                username="designer",
+                email="designer@example.com",
+                hashed_password=hash_password("Designer123456"),
+                full_name="演示设计工程师",
+                is_active=True,
+                is_superuser=False,
+                department_id=dept.id,
+                position_id=pos.id,
+            )
+            db.add(designer_user)
+
+        await db.flush()
+
+        if not await db.scalar(
+            select(UserRole.user_id).where(
+                UserRole.user_id == admin_user.id,
+                UserRole.role_id == admin_role.id,
+            )
+        ):
+            db.add(UserRole(user_id=admin_user.id, role_id=admin_role.id))
+        if not await db.scalar(
+            select(UserRole.user_id).where(
+                UserRole.user_id == designer_user.id,
+                UserRole.role_id == designer_role.id,
+            )
+        ):
+            db.add(UserRole(user_id=designer_user.id, role_id=designer_role.id))
+
+        proj = await db.scalar(select(Project).where(Project.code == "DEMO-001"))
+        if proj is None:
+            proj = Project(name="演示项目", code="DEMO-001", status="active")
+            db.add(proj)
+            await db.flush()
+
+        if not await db.scalar(
+            select(ProjectMember.user_id).where(
+                ProjectMember.project_id == proj.id,
+                ProjectMember.user_id == designer_user.id,
+            )
+        ):
+            db.add(
+                ProjectMember(
+                    project_id=proj.id,
+                    user_id=designer_user.id,
+                    role_in_project="member",
+                )
+            )
 
         db.add(
             Notification(
