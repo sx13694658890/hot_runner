@@ -1,36 +1,13 @@
-import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useLoginPage } from "@/pages/hooks/useLoginPage";
 
 export function LoginPage() {
-  const { token, user, login, error, clearError } = useAuth();
-  const navigate = useNavigate();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (token && user) navigate("/", { replace: true });
-  }, [token, user, navigate]);
+  const { token, user, error, username, setUsername, password, setPassword, loading, onSubmit } = useLoginPage();
 
   if (token && user) {
     return <Navigate to="/" replace />;
   }
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    clearError();
-    try {
-      await login(username, password);
-      navigate("/", { replace: true });
-    } catch {
-      /* error 已在 context */
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 via-white to-slate-100 px-4">

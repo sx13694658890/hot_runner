@@ -24,6 +24,10 @@ type Props = {
   value: WizardMoldForm;
   onChange: (next: WizardMoldForm | ((prev: WizardMoldForm) => WizardMoldForm)) => void;
   disabled: boolean;
+  /** 为 true 时整步禁止选择（如热流道类型为「单咀」） */
+  selectionForbidden?: boolean;
+  /** 与 `selectionForbidden` 配套的说明（展示在顶部 Alert） */
+  selectionForbiddenMessage?: string;
 };
 
 function sortDictItems(items: { id: string; label: string; sort_order: number }[]) {
@@ -44,7 +48,14 @@ function wizardRootKeyForMfldCategory(catCode: string, variant: MfldBodyTextVari
  * 字典值写入 `wizard_mfld_*_id` / `wizard_mfld_normal_*_id`，文本写入 `wizard_mfld_body_*_text` /
  * `wizard_mfld_normal_body_*_text`。
  */
-export function WizardManifoldCategoryFields({ value, onChange, disabled }: Props) {
+export function WizardManifoldCategoryFields({
+  value,
+  onChange,
+  disabled,
+  selectionForbidden = false,
+  selectionForbiddenMessage,
+}: Props) {
+  const effectiveDisabled = disabled || selectionForbidden;
   const [bundle, setBundle] = useState<MoldDictBundleResponse["categories"] | null>(null);
   const [categories, setCategories] = useState<SelDictCategoryRead[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -112,7 +123,7 @@ export function WizardManifoldCategoryFields({ value, onChange, disabled }: Prop
                 ? "暂无字典数据"
                 : `请选择${rowLabel}`
           }
-          disabled={disabled || loading || opts.length === 0}
+          disabled={effectiveDisabled || loading || opts.length === 0}
           loading={loading}
           className={`${inputBaseClass} [&_.ant-select-selector]:rounded [&_.ant-select-selector]:border-slate-200`}
           value={selectValue}
@@ -143,7 +154,7 @@ export function WizardManifoldCategoryFields({ value, onChange, disabled }: Prop
               <span className="text-slate-700">{wizardMoldFieldLabel(key)}</span>
               <Input
                 allowClear
-                disabled={disabled}
+                disabled={effectiveDisabled}
                 placeholder={placeholder}
                 className={inputBaseClass}
                 value={value.root[key] ?? ""}
@@ -164,6 +175,9 @@ export function WizardManifoldCategoryFields({ value, onChange, disabled }: Prop
       </Typography.Text>
 
       {err ? <Alert type="error" showIcon message={err} /> : null}
+      {selectionForbidden && selectionForbiddenMessage ? (
+        <Alert type="warning" showIcon message="分流板大类不可选" description={selectionForbiddenMessage} />
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">{prefixCodes.map((c) => renderSelect(c, "main"))}</div>
 

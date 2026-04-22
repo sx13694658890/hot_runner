@@ -8,7 +8,7 @@ import { useSelectionWizardOptional } from "@/contexts/SelectionWizardContext";
  */
 export function SelectionWizardDraftBanner() {
   const wizard = useSelectionWizardOptional();
-  if (wizard == null || !wizard.hasWizardDraftData) return null;
+  if (!wizard.hasWizardDraftData) return null;
 
   const { projectInfo, productDraft, moldDraft, hasProjectData, hasProductData, hasMoldData } = wizard;
   const parts: string[] = [];

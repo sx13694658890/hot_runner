@@ -1,113 +1,45 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { Alert, Button, Card, Space, Steps, Typography, message } from "antd";
-import { Link, useSearchParams } from "react-router-dom";
+import { Alert, Button, Card, Space, Steps, Typography } from "antd";
+import { Link } from "react-router-dom";
 
 import { WizardHotRunnerInfoFields } from "@/features/selection-catalog/WizardHotRunnerInfoFields";
 import { WizardMainNozzleCategoryFields } from "@/features/selection-catalog/WizardMainNozzleCategoryFields";
+import { useMoldHotRunnerTypeLabel } from "@/features/selection-catalog/useMoldHotRunnerTypeLabel";
 import { WizardManifoldCategoryFields } from "@/features/selection-catalog/WizardManifoldCategoryFields";
 import { WizardDriveSystemCategoryFields } from "@/features/selection-catalog/WizardDriveSystemCategoryFields";
 import { WizardHotNozzleCategoryFields } from "@/features/selection-catalog/WizardHotNozzleCategoryFields";
 import { WizardMoldFlowCaeFields } from "@/features/selection-catalog/WizardMoldFlowCaeFields";
 import { WizardInjectionMachineFields } from "@/features/selection-catalog/WizardInjectionMachineFields";
 import { WizardMoldInfoFields } from "@/features/selection-catalog/WizardMoldInfoFields";
-import { WizardPlaceholderStep } from "@/features/selection-catalog/WizardPlaceholderStep";
+import { WizardPartsFields } from "@/features/selection-catalog/WizardPartsFields";
+import { WizardSystemGlueMoldFields } from "@/features/selection-catalog/WizardSystemGlueMoldFields";
 import { WizardProductInfoFields } from "@/features/selection-catalog/WizardProductInfoFields";
 import { WizardProjectInfoFields } from "@/features/selection-catalog/WizardProjectInfoFields";
-import { useSelectionWizard } from "@/contexts/SelectionWizardContext";
-import { useAuth } from "@/contexts/AuthContext";
-
-/** 与 docs/选型向导-多步表单-需求说明.md 一致，共 11 步 */
-const STEP_COUNT = 11;
-
-const STEP_ITEMS: { title: string; description: string }[] = [
-  {
-    title: "项目信息",
-    description: "项目/客户/订单等上下文；订单需求字典、模具制造商与负责人联系方式。",
-  },
-  {
-    title: "产品信息",
-    description: "产品名称、材料、克重、型腔数等；对齐模具表单中的产品维度。",
-  },
-  {
-    title: "模具信息",
-    description: "模具编号、型腔、模架、尺寸、温控等模具根信息。",
-  },
-  {
-    title: "注塑机信息",
-    description: "机台吨位、螺杆、射出能力等约束或选型参数。",
-  },
-  {
-    title: "模流信息",
-    description: "主射咀/桥/分流板/热咀流道直径、法向热咀结构、胶口直径等（选型字典下拉）。",
-  },
-  {
-    title: "热流道信息",
-    description: "热流道系统选项；可对齐扁平行规格与各 detail-options 字典包。",
-  },
-  {
-    title: "主射咀大类",
-    description: "主射咀各大类（hrspec_mnz_*）各一个字典下拉，选中项写入向导草稿。",
-  },
-  {
-    title: "分流板大类",
-    description: "分流板各大类（hrspec_mfld_*）各一个字典下拉，选中项写入向导草稿。",
-  },
-  {
-    title: "热咀大类",
-    description:
-      "热咀各大类（hrspec_hnz_*）与驱动系统（hrspec_drv_*）各分类字典下拉，选中项写入向导草稿。",
-  },
-  {
-    title: "系统存胶模数",
-    description: "热流道系统存胶模数相关参数或档位（待接入）。",
-  },
-  {
-    title: "零配件",
-    description: "零配件清单或选型项；可与后续 BOM/选配表对接（待接入）。",
-  },
-];
-
-function parseStepFromSearch(params: URLSearchParams): number {
-  const raw = params.get("step");
-  if (raw == null) return 1;
-  const n = Number.parseInt(raw, 10);
-  if (Number.isNaN(n) || n < 1 || n > STEP_COUNT) return 1;
-  return n;
-}
+import {
+  useSelectionCatalogWizardPage,
+  WIZARD_STEP_COUNT,
+  WIZARD_STEP_ITEMS,
+} from "@/pages/hooks/useSelectionCatalogWizardPage";
+import { MOLD_HOT_RUNNER_TYPE_SINGLE_NOZZLE_LABEL } from "@/lib/selectionCatalogMoldPayload";
 
 export function SelectionCatalogWizardPage() {
-  const { can } = useAuth();
-  const canRead = can("selection:read");
-  const canWrite = can("selection:write");
+  const {
+    canRead,
+    canWrite,
+    step,
+    setStep,
+    currentMeta,
+    fieldsDisabled,
+    projectInfo,
+    setProjectInfo,
+    productDraft,
+    setProductDraft,
+    moldDraft,
+    setMoldDraft,
+    handleFinish,
+  } = useSelectionCatalogWizardPage();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const { projectInfo, setProjectInfo, productDraft, setProductDraft, moldDraft, setMoldDraft } =
-    useSelectionWizard();
-
-  const step = useMemo(() => parseStepFromSearch(searchParams), [searchParams]);
-
-  const setStep = useCallback(
-    (n: number) => {
-      const clamped = Math.min(Math.max(1, n), STEP_COUNT);
-      setSearchParams({ step: String(clamped) }, { replace: true });
-    },
-    [setSearchParams],
-  );
-
-  useEffect(() => {
-    const n = parseStepFromSearch(searchParams);
-    const raw = searchParams.get("step");
-    if (raw !== String(n)) {
-      setSearchParams({ step: String(n) }, { replace: true });
-    }
-  }, [searchParams, setSearchParams]);
-
-  const currentMeta = STEP_ITEMS[step - 1];
-
-  const handleFinish = () => {
-    message.success("表单数据已汇总（提交与后端对接待实现）");
-  };
+  const hotRunnerTypeLabel = useMoldHotRunnerTypeLabel(moldDraft.root.hot_runner_type_id);
+  const manifoldCategorySelectionForbidden = hotRunnerTypeLabel === MOLD_HOT_RUNNER_TYPE_SINGLE_NOZZLE_LABEL;
 
   if (!canRead) {
     return (
@@ -116,8 +48,6 @@ export function SelectionCatalogWizardPage() {
       </div>
     );
   }
-
-  const fieldsDisabled = !canWrite;
 
   const renderStepBody = () => {
     switch (step) {
@@ -238,6 +168,12 @@ export function SelectionCatalogWizardPage() {
               value={moldDraft}
               onChange={setMoldDraft}
               disabled={fieldsDisabled}
+              selectionForbidden={manifoldCategorySelectionForbidden}
+              selectionForbiddenMessage={
+                manifoldCategorySelectionForbidden
+                  ? "热流道类型为「单咀」时本步禁止选择；请在第 6 步修改类型。切换为单咀时已清空本步相关草稿键。"
+                  : undefined
+              }
             />
           </>
         );
@@ -267,17 +203,33 @@ export function SelectionCatalogWizardPage() {
         );
       case 10:
         return (
-          <WizardPlaceholderStep
-            title="系统存胶模数"
-            description="系统存胶模数参数或档位（数值/枚举待业务定）；本期为占位。"
-          />
+          <>
+            <Alert
+              type="info"
+              showIcon
+              className="mb-4"
+              message="系统存胶模数"
+              description="选项为向导内置三档，值写入 moldDraft.root.wizard_system_glue_mold_count（字符串枚举，非字典 UUID）。"
+            />
+            <WizardSystemGlueMoldFields
+              value={moldDraft}
+              onChange={setMoldDraft}
+              disabled={fieldsDisabled}
+            />
+          </>
         );
       case 11:
         return (
-          <WizardPlaceholderStep
-            title="零配件"
-            description="零配件清单或多选（密封件、加热件等）；可与 BOM/选配表对接；本期为占位。"
-          />
+          <>
+            <Alert
+              type="info"
+              showIcon
+              className="mb-4"
+              message="零配件"
+              description="铭牌、压线片为向导内置下拉；值写入 moldDraft.root.wizard_parts_nameplate、wizard_parts_wire_clip。"
+            />
+            <WizardPartsFields value={moldDraft} onChange={setMoldDraft} disabled={fieldsDisabled} />
+          </>
         );
       default:
         return null;
@@ -295,10 +247,12 @@ export function SelectionCatalogWizardPage() {
           分步填写项目 → 产品 → 模具 → 注塑机 → 模流 → 热流道 → 主射咀大类 → 分流板大类 → 热咀大类 → 系统存胶模数 →
           零配件。左侧为步骤导航，可点击任意一步跳转；URL 同步{" "}
           <Typography.Text code>?step=1</Typography.Text>～
-          <Typography.Text code>{STEP_COUNT}</Typography.Text>
-          。项目信息由全局状态 <Typography.Text code>SelectionWizardProvider</Typography.Text> 管理，并同步到{" "}
-          <Typography.Text code>sessionStorage</Typography.Text>，其它页面可通过{" "}
-          <Typography.Text code>useSelectionWizard()</Typography.Text> 读取。
+          <Typography.Text code>{WIZARD_STEP_COUNT}</Typography.Text>
+          。草稿由 <Typography.Text code>Zustand</Typography.Text>（
+          <Typography.Text code>useSelectionWizardStore</Typography.Text>）与{" "}
+          <Typography.Text code>useSelectionWizard()</Typography.Text> 管理，经{" "}
+          <Typography.Text code>SelectionWizardProvider</Typography.Text> 挂载后同步到{" "}
+          <Typography.Text code>sessionStorage</Typography.Text>。
         </p>
       </div>
 
@@ -310,7 +264,7 @@ export function SelectionCatalogWizardPage() {
               size="small"
               current={step - 1}
               onChange={(idx) => setStep(idx + 1)}
-              items={STEP_ITEMS.map((s) => ({ title: s.title }))}
+              items={WIZARD_STEP_ITEMS.map((s) => ({ title: s.title }))}
             />
           </Card>
         </aside>
@@ -330,7 +284,7 @@ export function SelectionCatalogWizardPage() {
               )}
             </Space>
             <Space>
-              {step < STEP_COUNT ? (
+              {step < WIZARD_STEP_COUNT ? (
                 <Button type="primary" onClick={() => setStep(step + 1)}>
                   下一步
                 </Button>

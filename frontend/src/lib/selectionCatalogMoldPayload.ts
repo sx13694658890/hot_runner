@@ -371,6 +371,22 @@ export function moldDictCategoryCode(fieldKey: string): string {
   return fieldKey.replace(/_id$/, "");
 }
 
+/** 与 `sel_mold_dict` 热流道类型种子「单点针阀」显示名一致；向导第 6 步联动用 */
+export const MOLD_HOT_RUNNER_TYPE_SINGLE_POINT_NEEDLE_VALVE_LABEL = "单点针阀";
+/** 与 `sel_mold_dict` 热流道类型种子「单咀」显示名一致；向导第 6 / 8 步联动用 */
+export const MOLD_HOT_RUNNER_TYPE_SINGLE_NOZZLE_LABEL = "单咀";
+/** 与 `sel_mold_dict` 进胶系统描述种子「法向」显示名一致；单点针阀 / 单咀时禁止选择 */
+export const MOLD_GATE_SYSTEM_DESC_NORMAL_DIRECTION_LABEL = "法向";
+
+/** 清空第 8 步「分流板大类」全部 `wizard_mfld_*` 草稿键（含法向分流板与主体补充文本） */
+export function clearWizardManifoldDraftRootKeys(root: Record<string, string>): Record<string, string> {
+  const next = { ...root };
+  for (const k of Object.keys(next)) {
+    if (k.startsWith("wizard_mfld_") && next[k]) next[k] = "";
+  }
+  return next;
+}
+
 /** 产品信息字典：列名 → mold-options 分类 code（与后端 PRODUCT_DICT_COLUMN_TO_CATEGORY 一致） */
 export function productDictCategoryCode(fieldKey: string): string {
   const map: Record<string, string> = {
@@ -471,6 +487,11 @@ export const WIZARD_MOLD_ROOT_STRING_KEYS = [
   ...HNZ_WIZARD_ROOT_ID_KEYS,
   /** 第 9 步：驱动系统字典项 UUID（GET …/dict/drive-system-detail-options） */
   ...DRV_WIZARD_ROOT_ID_KEYS,
+  /** 第 10 步：系统存胶模数（内置枚举 slug，非 UUID） */
+  "wizard_system_glue_mold_count",
+  /** 第 11 步：零配件（内置枚举 slug） */
+  "wizard_parts_nameplate",
+  "wizard_parts_wire_clip",
 ] as const;
 
 export const WIZARD_MOLD_TRIBOOL_KEYS = [
@@ -544,6 +565,9 @@ export const WIZARD_MOLD_LABEL_OVERRIDES: Partial<Record<string, string>> = {
   ...WIZARD_MFLD_BODY_TEXT_LABEL_OVERRIDES,
   ...WIZARD_HNZ_ID_LABEL_OVERRIDES,
   ...WIZARD_DRV_ID_LABEL_OVERRIDES,
+  wizard_system_glue_mold_count: "系统存胶模数",
+  wizard_parts_nameplate: "铭牌",
+  wizard_parts_wire_clip: "压线片",
 };
 
 export function wizardMoldFieldLabel(key: string): string {

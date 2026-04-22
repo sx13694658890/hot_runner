@@ -1,27 +1,17 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import type { ReactNode } from "react";
+import { useShallow } from "zustand/react/shallow";
 
+import type { WizardDraftV1, WizardProductForm, WizardProjectInfo } from "@/features/selection-catalog/wizardDraftStorage";
+import type { WizardMoldForm } from "@/lib/selectionCatalogMoldPayload";
 import {
-  emptyProjectInfo,
-  emptyWizardProduct,
-  hasWizardMoldFilled,
-  hasWizardProductFilled,
-  hasWizardProjectFilled,
-  loadWizardDraft,
-  saveWizardDraftPartial,
-  type WizardDraftV1,
-  type WizardProductForm,
-  type WizardProjectInfo,
-} from "@/features/selection-catalog/wizardDraftStorage";
-import { emptyWizardMold, type WizardMoldForm } from "@/lib/selectionCatalogMoldPayload";
+  selectionWizardHasDraftData,
+  selectionWizardHasMoldData,
+  selectionWizardHasProductData,
+  selectionWizardHasProjectData,
+  useSelectionWizardStore,
+} from "@/stores/selectionWizardStore";
 
-type SelectionWizardContextValue = {
+export type SelectionWizardContextValue = {
   /** 完整草稿（后续可扩展 mold 等） */
   draft: WizardDraftV1;
   projectInfo: WizardProjectInfo;
@@ -43,115 +33,38 @@ type SelectionWizardContextValue = {
   hasWizardDraftData: boolean;
 };
 
-const SelectionWizardContext = createContext<SelectionWizardContextValue | null>(null);
+function buildWizardValue(s: ReturnType<typeof useSelectionWizardStore.getState>): SelectionWizardContextValue {
+  const { draft } = s;
+  return {
+    draft,
+    projectInfo: draft.project,
+    setProjectInfo: s.setProjectInfo,
+    productDraft: draft.product,
+    setProductDraft: s.setProductDraft,
+    moldDraft: draft.mold,
+    setMoldDraft: s.setMoldDraft,
+    replaceDraft: s.replaceDraft,
+    resetWizard: s.resetWizard,
+    hasProjectData: selectionWizardHasProjectData(draft),
+    hasProductData: selectionWizardHasProductData(draft),
+    hasMoldData: selectionWizardHasMoldData(draft),
+    hasWizardDraftData: selectionWizardHasDraftData(draft),
+  };
+}
 
+/**
+ * 界定选型向导数据在应用树中的挂载点；**状态由 Zustand** `useSelectionWizardStore` 持有，
+ * 每次变更仍经 `saveWizardDraftPartial` 写入 **sessionStorage**（`wizardDraftStorage`）。
+ */
 export function SelectionWizardProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraft] = useState<WizardDraftV1>(() => loadWizardDraft());
-
-  const setProjectInfo = useCallback(
-    (next: WizardProjectInfo | ((prev: WizardProjectInfo) => WizardProjectInfo)) => {
-      setDraft((d) => {
-        const project = typeof next === "function" ? next(d.project) : next;
-        const newDraft = { ...d, project };
-        saveWizardDraftPartial(newDraft);
-        return newDraft;
-      });
-    },
-    [],
-  );
-
-  const replaceDraft = useCallback((next: WizardDraftV1) => {
-    saveWizardDraftPartial(next);
-    setDraft(next);
-  }, []);
-
-  const setProductDraft = useCallback(
-    (next: WizardProductForm | ((prev: WizardProductForm) => WizardProductForm)) => {
-      setDraft((d) => {
-        const prev = d.product;
-        const product = typeof next === "function" ? next(prev) : next;
-        const newDraft = { ...d, product };
-        saveWizardDraftPartial(newDraft);
-        return newDraft;
-      });
-    },
-    [],
-  );
-
-  const setMoldDraft = useCallback(
-    (next: WizardMoldForm | ((prev: WizardMoldForm) => WizardMoldForm)) => {
-      setDraft((d) => {
-        const prev = d.mold;
-        const mold = typeof next === "function" ? next(prev) : next;
-        const newDraft = { ...d, mold };
-        saveWizardDraftPartial(newDraft);
-        return newDraft;
-      });
-    },
-    [],
-  );
-
-  const resetWizard = useCallback(() => {
-    const empty: WizardDraftV1 = {
-      project: emptyProjectInfo(),
-      product: emptyWizardProduct(),
-      mold: emptyWizardMold(),
-    };
-    saveWizardDraftPartial(empty);
-    setDraft(empty);
-  }, []);
-
-  const hasProjectData = useMemo(() => hasWizardProjectFilled(draft.project), [draft.project]);
-  const hasProductData = useMemo(() => hasWizardProductFilled(draft.product), [draft.product]);
-  const hasMoldData = useMemo(() => hasWizardMoldFilled(draft.mold), [draft.mold]);
-
-  const hasWizardDraftData = useMemo(
-    () => hasProjectData || hasProductData || hasMoldData,
-    [hasProjectData, hasProductData, hasMoldData],
-  );
-
-  const value = useMemo<SelectionWizardContextValue>(
-    () => ({
-      draft,
-      projectInfo: draft.project,
-      setProjectInfo,
-      productDraft: draft.product,
-      setProductDraft,
-      moldDraft: draft.mold,
-      setMoldDraft,
-      replaceDraft,
-      resetWizard,
-      hasProjectData,
-      hasProductData,
-      hasMoldData,
-      hasWizardDraftData,
-    }),
-    [
-      draft,
-      setProjectInfo,
-      setProductDraft,
-      setMoldDraft,
-      replaceDraft,
-      resetWizard,
-      hasProjectData,
-      hasProductData,
-      hasMoldData,
-      hasWizardDraftData,
-    ],
-  );
-
-  return <SelectionWizardContext.Provider value={value}>{children}</SelectionWizardContext.Provider>;
+  return children;
 }
 
 export function useSelectionWizard(): SelectionWizardContextValue {
-  const ctx = useContext(SelectionWizardContext);
-  if (ctx == null) {
-    throw new Error("useSelectionWizard 必须在 SelectionWizardProvider 内使用");
-  }
-  return ctx;
+  return useSelectionWizardStore(useShallow((s) => buildWizardValue(s)));
 }
 
-/** 可选：未包裹 Provider 时不抛错（如单测），返回 null */
-export function useSelectionWizardOptional(): SelectionWizardContextValue | null {
-  return useContext(SelectionWizardContext);
+/** 与 `useSelectionWizard` 相同；草稿为全局 store。 */
+export function useSelectionWizardOptional(): SelectionWizardContextValue {
+  return useSelectionWizard();
 }
