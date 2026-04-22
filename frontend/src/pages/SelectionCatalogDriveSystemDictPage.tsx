@@ -8,39 +8,7 @@ import { fetchDriveSystemDetailDictBundle } from "@/lib/selectionCatalogDictApi"
 import type { SelDictCategoryRead, SelDictItemRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DictCategoryPrefixToolbar } from "@/features/selection-catalog/DictCategoryPrefixToolbar";
-
-/** 与 docs/驱动系统字典-前端对接.md、backend sel_drive_system_detail_dict 顺序一致 */
-const DRV_CATEGORY_ORDER: readonly string[] = [
-  "hrspec_drv_valve_pin_spec",
-  "hrspec_drv_valve_pin_material",
-  "hrspec_drv_valve_pin_coating",
-  "hrspec_drv_sleeve_regular",
-  "hrspec_drv_sleeve_color_change",
-  "hrspec_drv_actuator_plate_model",
-  "hrspec_drv_actuator_plate_bom_hs_vc",
-  "hrspec_drv_actuator_plate_bom_fep",
-  "hrspec_drv_manifold_pneumatic_connector",
-  "hrspec_drv_manifold_hydraulic_connector",
-  "hrspec_drv_manifold_tubing",
-  "hrspec_drv_single_point_base_parts",
-  "hrspec_drv_guide_sleeve",
-] as const;
-
-const DRV_PREFIX = "hrspec_drv_";
-
-function isDrvCategory(code: string): boolean {
-  return code.startsWith(DRV_PREFIX);
-}
-
-function sortDrvCategories(cats: SelDictCategoryRead[]): SelDictCategoryRead[] {
-  const idx = new Map(DRV_CATEGORY_ORDER.map((c, i) => [c, i]));
-  return [...cats].sort((a, b) => {
-    const ia = idx.get(a.code) ?? 999;
-    const ib = idx.get(b.code) ?? 999;
-    if (ia !== ib) return ia - ib;
-    return a.code.localeCompare(b.code);
-  });
-}
+import { DRV_PREFIX, isDrvCategory, sortDrvCategories } from "@/features/selection-catalog/driveSystemDetailDictMeta";
 
 export function SelectionCatalogDriveSystemDictPage() {
   const { can } = useAuth();

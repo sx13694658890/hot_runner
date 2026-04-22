@@ -2,6 +2,12 @@
  * SelMoldInfoCreate / PATCH 请求体拼装（对齐 backend SelMoldInfoWrite + 嵌套）
  */
 import {
+  DRV_CATEGORY_FALLBACK_LABELS,
+  DRV_CATEGORY_ORDER,
+  drvCategoryCodeToWizardRootKey,
+  DRV_WIZARD_ROOT_ID_KEYS,
+} from "@/features/selection-catalog/driveSystemDetailDictMeta";
+import {
   HNZ_CATEGORY_FALLBACK_LABELS,
   HNZ_CATEGORY_ORDER,
   hnzCategoryCodeToWizardRootKey,
@@ -37,6 +43,13 @@ const WIZARD_HNZ_ID_LABEL_OVERRIDES: Partial<Record<string, string>> = Object.fr
   HNZ_CATEGORY_ORDER.map((code) => [
     hnzCategoryCodeToWizardRootKey(code),
     HNZ_CATEGORY_FALLBACK_LABELS[code] ?? code,
+  ]),
+);
+
+const WIZARD_DRV_ID_LABEL_OVERRIDES: Partial<Record<string, string>> = Object.fromEntries(
+  DRV_CATEGORY_ORDER.map((code) => [
+    drvCategoryCodeToWizardRootKey(code),
+    DRV_CATEGORY_FALLBACK_LABELS[code] ?? code,
   ]),
 );
 
@@ -456,6 +469,8 @@ export const WIZARD_MOLD_ROOT_STRING_KEYS = [
   ...MFLD_MANIFOLD_NORMAL_BODY_TEXT_KEYS,
   /** 第 9 步：热咀各大类字典项 UUID（GET …/dict/hot-nozzle-detail-options，每分类一个下拉） */
   ...HNZ_WIZARD_ROOT_ID_KEYS,
+  /** 第 9 步：驱动系统字典项 UUID（GET …/dict/drive-system-detail-options） */
+  ...DRV_WIZARD_ROOT_ID_KEYS,
 ] as const;
 
 export const WIZARD_MOLD_TRIBOOL_KEYS = [
@@ -528,6 +543,7 @@ export const WIZARD_MOLD_LABEL_OVERRIDES: Partial<Record<string, string>> = {
   ...WIZARD_MFLD_NORMAL_ID_LABEL_OVERRIDES,
   ...WIZARD_MFLD_BODY_TEXT_LABEL_OVERRIDES,
   ...WIZARD_HNZ_ID_LABEL_OVERRIDES,
+  ...WIZARD_DRV_ID_LABEL_OVERRIDES,
 };
 
 export function wizardMoldFieldLabel(key: string): string {

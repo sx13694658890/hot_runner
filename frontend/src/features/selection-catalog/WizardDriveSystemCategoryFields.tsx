@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Select, Typography } from "antd";
 
 import { ApiError, apiFetch, formatApiDetail } from "@/lib/api";
-import { fetchHotNozzleDetailDictBundle } from "@/lib/selectionCatalogDictApi";
+import { fetchDriveSystemDetailDictBundle } from "@/lib/selectionCatalogDictApi";
 import {
-  HNZ_CATEGORY_FALLBACK_LABELS,
-  HNZ_CATEGORY_ORDER,
-  hnzCategoryCodeToWizardRootKey,
-  isHnzCategory,
-  sortHnzCategories,
-  splitHnzWizardNozzleHeadLayout,
-} from "@/features/selection-catalog/hotNozzleDetailDictMeta";
+  DRV_CATEGORY_FALLBACK_LABELS,
+  DRV_CATEGORY_ORDER,
+  drvCategoryCodeToWizardRootKey,
+  isDrvCategory,
+  sortDrvCategories,
+  splitDrvWizardPlateActuatorBlock,
+} from "@/features/selection-catalog/driveSystemDetailDictMeta";
 import type { MoldDictBundleResponse, SelDictCategoryRead } from "@/lib/selectionCatalogTypes";
 import { type WizardMoldForm, wizardMoldFieldLabel } from "@/lib/selectionCatalogMoldPayload";
 
@@ -30,16 +30,16 @@ function sortDictItems(items: { id: string; label: string; sort_order: number }[
 }
 
 /**
- * 选型向导第 9 步（上栏）：热咀大类 — 按 `hrspec_hnz_*` 各分类分别一个可搜索下拉；
- * 「热咀咀头」分组内含结构代号四类及胶口套、咀芯、咀帽、阀口套、外卡簧、隔热帽等。
+ * 选型向导第 9 步（下栏）：驱动系统 — 按 `hrspec_drv_*` 各分类分别一个可搜索下拉；
+ * 「气缸板上开孔的驱动器」下按 HS40 / FEP30 / VC58～VC88 分型号选 BOM 零件。选中值写入 `moldDraft.root.wizard_drv_<后缀>_id`。
  */
-export function WizardHotNozzleCategoryFields({ value, onChange, disabled }: Props) {
+export function WizardDriveSystemCategoryFields({ value, onChange, disabled }: Props) {
   const [bundle, setBundle] = useState<MoldDictBundleResponse["categories"] | null>(null);
   const [categories, setCategories] = useState<SelDictCategoryRead[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
-  const { beforeCodes, nozzleHeadCodes, afterCodes } = useMemo(
-    () => splitHnzWizardNozzleHeadLayout(HNZ_CATEGORY_ORDER),
+  const { beforeCodes, plateActuatorCodes, afterCodes } = useMemo(
+    () => splitDrvWizardPlateActuatorBlock(DRV_CATEGORY_ORDER),
     [],
   );
 
@@ -49,15 +49,15 @@ export function WizardHotNozzleCategoryFields({ value, onChange, disabled }: Pro
       setErr(null);
       try {
         const [b, cats] = await Promise.all([
-          fetchHotNozzleDetailDictBundle(),
+          fetchDriveSystemDetailDictBundle(),
           apiFetch<SelDictCategoryRead[]>("/selection-catalog/dict/categories"),
         ]);
         if (cancelled) return;
         setBundle(b);
-        setCategories(sortHnzCategories(cats.filter((c) => isHnzCategory(c.code))));
+        setCategories(sortDrvCategories(cats.filter((c) => isDrvCategory(c.code))));
       } catch (e) {
         if (!cancelled) {
-          setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "加载热咀大类字典失败");
+          setErr(e instanceof ApiError ? formatApiDetail(e.detail) : "加载驱动系统字典失败");
           setBundle({});
           setCategories([]);
         }
@@ -81,9 +81,9 @@ export function WizardHotNozzleCategoryFields({ value, onChange, disabled }: Pro
   };
 
   const renderSelect = (catCode: string) => {
-    const fieldKey = hnzCategoryCodeToWizardRootKey(catCode);
+    const fieldKey = drvCategoryCodeToWizardRootKey(catCode);
     const rowLabel =
-      categoryLabelByCode.get(catCode) ?? HNZ_CATEGORY_FALLBACK_LABELS[catCode] ?? catCode;
+      categoryLabelByCode.get(catCode) ?? DRV_CATEGORY_FALLBACK_LABELS[catCode] ?? catCode;
     const items = bundle?.[catCode] ?? [];
     const opts = sortDictItems(items).map((o) => ({ value: o.id, label: o.label }));
     const rawVal = value.root[fieldKey]?.trim() ?? "";
@@ -121,29 +121,32 @@ export function WizardHotNozzleCategoryFields({ value, onChange, disabled }: Pro
   );
 
   return (
-    <div className="space-y-4">
-      <Typography.Text type="secondary" className="text-xs">
-        数据来自「热咀大类」扩展字典（<Typography.Text code>hrspec_hnz_*</Typography.Text>
-        ）；与扁平行热流道规格中热咀相关字段独立。咀头相关字段集中在「热咀咀头」分组内。
-      </Typography.Text>
+    <section className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
+      <Typography.Title level={5} className="!mb-2 !mt-0 text-slate-800">
+        驱动系统
+      </Typography.Title>
+      <Typography.Paragraph type="secondary" className="!mb-3 !mt-0 text-xs">
+        数据来自「驱动系统」扩展字典（<Typography.Text code>hrspec_drv_*</Typography.Text>
+        ）；与扁平行阀针规格等独立。
+      </Typography.Paragraph>
 
-      {err ? <Alert type="error" showIcon message={err} /> : null}
+      {err ? <Alert type="error" showIcon message={err} className="mb-3" /> : null}
 
       {renderGrid(beforeCodes)}
 
-      {nozzleHeadCodes.length > 0 ? (
-        <section className="rounded-lg border border-slate-200 bg-slate-50/70 p-4 shadow-sm">
+      {plateActuatorCodes.length > 0 ? (
+        <section className="mb-4 rounded-md border border-slate-200/80 bg-white/60 p-3">
           <Typography.Title level={5} className="!mb-2 !mt-0 text-slate-800">
-            热咀咀头
+            气缸板上开孔的驱动器
           </Typography.Title>
           <Typography.Paragraph type="secondary" className="!mb-3 !mt-0 text-xs">
-            结构代号（开放式/针阀式 × 大水口/点胶口）、胶口套、咀芯材质与涂层、咀帽、阀口套、外卡簧、隔热帽。
+            HS40、FEP30、VC58～VC88 各型号对应 BOM 零件（缸盖、缸体、活塞、挂针块、调节块等；FEP30 另含活塞外套）。
           </Typography.Paragraph>
-          <div className="grid gap-3 sm:grid-cols-2">{nozzleHeadCodes.map(renderSelect)}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{plateActuatorCodes.map(renderSelect)}</div>
         </section>
       ) : null}
 
       {renderGrid(afterCodes)}
-    </div>
+    </section>
   );
 }

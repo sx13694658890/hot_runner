@@ -5,6 +5,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { WizardHotRunnerInfoFields } from "@/features/selection-catalog/WizardHotRunnerInfoFields";
 import { WizardMainNozzleCategoryFields } from "@/features/selection-catalog/WizardMainNozzleCategoryFields";
 import { WizardManifoldCategoryFields } from "@/features/selection-catalog/WizardManifoldCategoryFields";
+import { WizardDriveSystemCategoryFields } from "@/features/selection-catalog/WizardDriveSystemCategoryFields";
 import { WizardHotNozzleCategoryFields } from "@/features/selection-catalog/WizardHotNozzleCategoryFields";
 import { WizardMoldFlowCaeFields } from "@/features/selection-catalog/WizardMoldFlowCaeFields";
 import { WizardInjectionMachineFields } from "@/features/selection-catalog/WizardInjectionMachineFields";
@@ -53,7 +54,8 @@ const STEP_ITEMS: { title: string; description: string }[] = [
   },
   {
     title: "热咀大类",
-    description: "热咀各大类（hrspec_hnz_*）各一个字典下拉，选中项写入向导草稿。",
+    description:
+      "热咀各大类（hrspec_hnz_*）与驱动系统（hrspec_drv_*）各分类字典下拉，选中项写入向导草稿。",
   },
   {
     title: "系统存胶模数",
@@ -246,14 +248,21 @@ export function SelectionCatalogWizardPage() {
               type="info"
               showIcon
               className="mb-4"
-              message="热咀大类"
-              description="选项来自 GET …/dict/hot-nozzle-detail-options；按 hrspec_hnz_* 各分类分别下拉，值写入 moldDraft.root.wizard_hnz_*_id（字典项 UUID）。"
+              message="热咀大类 / 驱动系统"
+              description="热咀：GET …/dict/hot-nozzle-detail-options，值写入 wizard_hnz_*_id；咀头相关字段在「热咀咀头」分组。驱动系统：GET …/dict/drive-system-detail-options，值写入 wizard_drv_*_id。"
             />
-            <WizardHotNozzleCategoryFields
-              value={moldDraft}
-              onChange={setMoldDraft}
-              disabled={fieldsDisabled}
-            />
+            <div className="space-y-6">
+              <WizardHotNozzleCategoryFields
+                value={moldDraft}
+                onChange={setMoldDraft}
+                disabled={fieldsDisabled}
+              />
+              <WizardDriveSystemCategoryFields
+                value={moldDraft}
+                onChange={setMoldDraft}
+                disabled={fieldsDisabled}
+              />
+            </div>
           </>
         );
       case 10:

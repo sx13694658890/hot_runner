@@ -1,7 +1,7 @@
 import type { SelDictCategoryRead } from "@/lib/selectionCatalogTypes";
 
-/** 与 backend sel_hot_nozzle_detail_dict、热咀大类字典页顺序一致 */
-export const HNZ_CATEGORY_ORDER: readonly string[] = [
+/** 热咀本体 / 垫圈 / 碟簧（咀头分组之上） */
+export const HNZ_BEFORE_NOZZLE_HEAD: readonly string[] = [
   "hrspec_hnz_body_base_type",
   "hrspec_hnz_heaters_per_body",
   "hrspec_hnz_body_heater",
@@ -9,6 +9,13 @@ export const HNZ_CATEGORY_ORDER: readonly string[] = [
   "hrspec_hnz_section_coiled",
   "hrspec_hnz_section_beryllium",
   "hrspec_hnz_body_length",
+] as const;
+
+/**
+ * 向导「热咀咀头」分组：结构代号四类 + 胶口套、咀芯、咀帽、阀口套、外卡簧、隔热帽
+ * （与 backend 种子顺序一致）
+ */
+export const HNZ_WIZARD_NOZZLE_HEAD_BLOCK_CODES: readonly string[] = [
   "hrspec_hnz_structure_open_large",
   "hrspec_hnz_structure_open_dot",
   "hrspec_hnz_structure_valve_large",
@@ -17,30 +24,45 @@ export const HNZ_CATEGORY_ORDER: readonly string[] = [
   "hrspec_hnz_core_material",
   "hrspec_hnz_core_coating",
   "hrspec_hnz_nozzle_cap",
-  "hrspec_hnz_insulation_ring",
   "hrspec_hnz_valve_bushing",
   "hrspec_hnz_outer_circlip",
+  "hrspec_hnz_insulation_ring",
+] as const;
+
+export const HNZ_AFTER_NOZZLE_HEAD: readonly string[] = [
   "hrspec_hnz_bushing",
   "hrspec_hnz_water_jacket",
 ] as const;
 
+/** 与 backend sel_hot_nozzle_detail_dict、热咀大类字典页顺序一致 */
+export const HNZ_CATEGORY_ORDER: readonly string[] = [
+  ...HNZ_BEFORE_NOZZLE_HEAD,
+  ...HNZ_WIZARD_NOZZLE_HEAD_BLOCK_CODES,
+  ...HNZ_AFTER_NOZZLE_HEAD,
+] as const;
+
 export const HNZ_PREFIX = "hrspec_hnz_";
 
-/** 热咀结构代码子类（开放式/针阀式 × 大水口/点胶口），向导中可单独成组展示 */
-export const HNZ_STRUCTURE_CODE_PREFIX = "hrspec_hnz_structure_";
+const _nozzleHeadSet = new Set<string>(HNZ_WIZARD_NOZZLE_HEAD_BLOCK_CODES);
 
-export function splitHnzWizardStructureBlock(
+/** 将顺序拆为：咀头分组之上 | 「热咀咀头」块 | 衬套与运水套 */
+export function splitHnzWizardNozzleHeadLayout(
   order: readonly string[] = HNZ_CATEGORY_ORDER,
-): { beforeCodes: string[]; structureCodes: string[]; afterCodes: string[] } {
-  const idxs = order.map((c, i) => (c.startsWith(HNZ_STRUCTURE_CODE_PREFIX) ? i : -1)).filter((i) => i >= 0);
-  if (idxs.length === 0) {
-    return { beforeCodes: [...order], structureCodes: [], afterCodes: [] };
+): { beforeCodes: string[]; nozzleHeadCodes: string[]; afterCodes: string[] } {
+  let lo = -1;
+  let hi = -1;
+  order.forEach((c, i) => {
+    if (_nozzleHeadSet.has(c)) {
+      if (lo < 0) lo = i;
+      hi = i;
+    }
+  });
+  if (lo < 0) {
+    return { beforeCodes: [...order], nozzleHeadCodes: [], afterCodes: [] };
   }
-  const lo = Math.min(...idxs);
-  const hi = Math.max(...idxs);
   return {
     beforeCodes: [...order.slice(0, lo)],
-    structureCodes: [...order.slice(lo, hi + 1)],
+    nozzleHeadCodes: [...order.slice(lo, hi + 1)],
     afterCodes: [...order.slice(hi + 1)],
   };
 }
@@ -80,15 +102,15 @@ export const HNZ_CATEGORY_FALLBACK_LABELS: Record<string, string> = {
   hrspec_hnz_section_coiled: "垫圈-镶嵌用",
   hrspec_hnz_section_beryllium: "垫圈-铜套用",
   hrspec_hnz_body_length: "本体碟簧",
-  hrspec_hnz_structure_open_large: "热咀咀头-结构代码-开放式-大水口",
-  hrspec_hnz_structure_open_dot: "热咀咀头-结构代码-开放式-点胶口",
-  hrspec_hnz_structure_valve_large: "热咀咀头-结构代码-针阀式-大水口",
-  hrspec_hnz_structure_valve_dot: "热咀咀头-结构代码-针阀式-点胶口",
-  hrspec_hnz_gate_diameter: "热咀咀头-胶口直径",
+  hrspec_hnz_structure_open_large: "热咀咀头-开放式-大水口",
+  hrspec_hnz_structure_open_dot: "热咀咀头-开放式-点胶口",
+  hrspec_hnz_structure_valve_large: "热咀咀头-针阀式-大水口",
+  hrspec_hnz_structure_valve_dot: "热咀咀头-针阀式-点胶口",
+  hrspec_hnz_gate_diameter: "热咀咀头-胶口套",
   hrspec_hnz_core_material: "热咀咀头-咀芯材质",
   hrspec_hnz_core_coating: "热咀咀头-咀芯涂层工艺",
   hrspec_hnz_nozzle_cap: "热咀咀头-咀帽",
-  hrspec_hnz_insulation_ring: "热咀咀头-隔热圈",
+  hrspec_hnz_insulation_ring: "热咀咀头-隔热帽",
   hrspec_hnz_valve_bushing: "热咀咀头-阀口套",
   hrspec_hnz_outer_circlip: "热咀咀头-外卡簧",
   hrspec_hnz_bushing: "衬套",
