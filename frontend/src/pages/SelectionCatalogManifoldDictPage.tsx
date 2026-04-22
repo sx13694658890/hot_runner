@@ -8,46 +8,7 @@ import { fetchManifoldDetailDictBundle } from "@/lib/selectionCatalogDictApi";
 import type { SelDictCategoryRead, SelDictItemRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DictCategoryPrefixToolbar } from "@/features/selection-catalog/DictCategoryPrefixToolbar";
-
-/** 与 docs/分流板字典-前端对接.md、backend sel_manifold_detail_dict 顺序一致 */
-const MFLD_CATEGORY_ORDER: readonly string[] = [
-  "hrspec_mfld_process",
-  "hrspec_mfld_bridge_style",
-  "hrspec_mfld_bridge_channel_diameter",
-  "hrspec_mfld_manifold_thickness",
-  "hrspec_mfld_runner_layout",
-  "hrspec_mfld_point_coding",
-  "hrspec_mfld_manifold_runner_diameter",
-  "hrspec_mfld_runner_layers",
-  "hrspec_mfld_spacer_block",
-  "hrspec_mfld_plate_disc_spring",
-  "hrspec_mfld_center_locating_pin",
-  "hrspec_mfld_anti_rotation_pin",
-  "hrspec_mfld_plug_regular",
-  "hrspec_mfld_plug_flat",
-  "hrspec_mfld_plug_insert_basic",
-  "hrspec_mfld_plug_insert_t",
-  "hrspec_mfld_plug_insert_i",
-  "hrspec_mfld_plug_insert_l",
-  "hrspec_mfld_water_connector",
-  "hrspec_mfld_oil_connector",
-] as const;
-
-const MFLD_PREFIX = "hrspec_mfld_";
-
-function isMfldCategory(code: string): boolean {
-  return code.startsWith(MFLD_PREFIX);
-}
-
-function sortMfldCategories(cats: SelDictCategoryRead[]): SelDictCategoryRead[] {
-  const idx = new Map(MFLD_CATEGORY_ORDER.map((c, i) => [c, i]));
-  return [...cats].sort((a, b) => {
-    const ia = idx.get(a.code) ?? 999;
-    const ib = idx.get(b.code) ?? 999;
-    if (ia !== ib) return ia - ib;
-    return a.code.localeCompare(b.code);
-  });
-}
+import { isMfldCategory, MFLD_PREFIX, sortMfldCategories } from "@/features/selection-catalog/manifoldDetailDictMeta";
 
 export function SelectionCatalogManifoldDictPage() {
   const { can } = useAuth();

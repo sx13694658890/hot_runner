@@ -75,6 +75,11 @@ export function loadWizardDraft(): WizardDraftV1 {
     for (const k of WIZARD_MOLD_ROOT_STRING_KEYS) {
       if (mergedRoot[k] === undefined) mergedRoot[k] = "";
     }
+    // 旧版单字段扁平行主射咀选择已拆分为 wizard_mnz_*_id，丢弃遗留键避免脏数据
+    delete mergedRoot.wizard_main_nozzle_detail_flat_id;
+    delete mergedRoot.wizard_mnz_adapter_ring_bridge_id;
+    delete mergedRoot.wizard_mnz_adapter_ring_stack_id;
+    delete mergedRoot.wizard_mnz_other_accessories_id;
     const mergedRootBool = { ...moldBase.rootBool, ...pm?.rootBool };
     for (const k of WIZARD_MOLD_TRIBOOL_KEYS) {
       if (mergedRootBool[k] === undefined) mergedRootBool[k] = "";

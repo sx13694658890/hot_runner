@@ -8,43 +8,7 @@ import { fetchHotNozzleDetailDictBundle } from "@/lib/selectionCatalogDictApi";
 import type { SelDictCategoryRead, SelDictItemRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DictCategoryPrefixToolbar } from "@/features/selection-catalog/DictCategoryPrefixToolbar";
-
-/** 与 docs/热咀字典-前端对接.md、backend sel_hot_nozzle_detail_dict 顺序一致 */
-const HNZ_CATEGORY_ORDER: readonly string[] = [
-  "hrspec_hnz_body_base_type",
-  "hrspec_hnz_heaters_per_body",
-  "hrspec_hnz_body_heater",
-  "hrspec_hnz_body_material",
-  "hrspec_hnz_section_coiled",
-  "hrspec_hnz_section_beryllium",
-  "hrspec_hnz_body_length",
-  "hrspec_hnz_structure_code",
-  "hrspec_hnz_gate_diameter",
-  "hrspec_hnz_core_material",
-  "hrspec_hnz_core_coating",
-  "hrspec_hnz_nozzle_cap",
-  "hrspec_hnz_insulation_ring",
-  "hrspec_hnz_valve_bushing",
-  "hrspec_hnz_outer_circlip",
-  "hrspec_hnz_bushing",
-  "hrspec_hnz_water_jacket",
-] as const;
-
-const HNZ_PREFIX = "hrspec_hnz_";
-
-function isHnzCategory(code: string): boolean {
-  return code.startsWith(HNZ_PREFIX);
-}
-
-function sortHnzCategories(cats: SelDictCategoryRead[]): SelDictCategoryRead[] {
-  const idx = new Map(HNZ_CATEGORY_ORDER.map((c, i) => [c, i]));
-  return [...cats].sort((a, b) => {
-    const ia = idx.get(a.code) ?? 999;
-    const ib = idx.get(b.code) ?? 999;
-    if (ia !== ib) return ia - ib;
-    return a.code.localeCompare(b.code);
-  });
-}
+import { HNZ_PREFIX, isHnzCategory, sortHnzCategories } from "@/features/selection-catalog/hotNozzleDetailDictMeta";
 
 export function SelectionCatalogHotNozzleDictPage() {
   const { can } = useAuth();

@@ -21,7 +21,7 @@ type Props = {
 };
 
 /**
- * 选型向导第 6 步：热流道编号、咀数、类型、进胶/分流板、所有权、编号规则、驱动与阀、线架、插座与接线等；
+ * 选型向导第 6 步（共 11 步）：热流道编号、咀数、类型、进胶/分流板、所有权、编号规则、驱动与阀、线架、插座与接线等；
  * 与 sel_mold_info 根部字段及 GET …/dict/mold-options 一致；阀针样式来自扁平行规格字典 hrspec_valve_pin_style（仅存向导键 wizard_valve_pin_style_id）。
  */
 export function WizardHotRunnerInfoFields({ value, onChange, disabled }: Props) {

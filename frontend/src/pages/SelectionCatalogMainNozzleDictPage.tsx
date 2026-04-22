@@ -8,34 +8,7 @@ import { fetchMainNozzleDetailDictBundle } from "@/lib/selectionCatalogDictApi";
 import type { SelDictCategoryRead, SelDictItemRead } from "@/lib/selectionCatalogTypes";
 import { useAuth } from "@/contexts/AuthContext";
 import { DictCategoryPrefixToolbar } from "@/features/selection-catalog/DictCategoryPrefixToolbar";
-
-/** 与 docs/主射咀字典-前端对接.md、backend sel_main_nozzle_detail_dict 顺序一致 */
-const MNZ_CATEGORY_ORDER: readonly string[] = [
-  "hrspec_mnz_body_heated",
-  "hrspec_mnz_body_unheated",
-  "hrspec_mnz_adapter_ring_bridge",
-  "hrspec_mnz_adapter_ring_stack",
-  "hrspec_mnz_sr_ball",
-  "hrspec_mnz_main_heater",
-  "hrspec_mnz_thermocouple_style",
-  "hrspec_mnz_body_material",
-] as const;
-
-const MNZ_PREFIX = "hrspec_mnz_";
-
-function isMnzCategory(code: string): boolean {
-  return code.startsWith(MNZ_PREFIX);
-}
-
-function sortMnzCategories(cats: SelDictCategoryRead[]): SelDictCategoryRead[] {
-  const idx = new Map(MNZ_CATEGORY_ORDER.map((c, i) => [c, i]));
-  return [...cats].sort((a, b) => {
-    const ia = idx.get(a.code) ?? 999;
-    const ib = idx.get(b.code) ?? 999;
-    if (ia !== ib) return ia - ib;
-    return a.code.localeCompare(b.code);
-  });
-}
+import { isMnzCategory, MNZ_PREFIX, sortMnzCategories } from "@/features/selection-catalog/mainNozzleDetailDictMeta";
 
 export function SelectionCatalogMainNozzleDictPage() {
   const { can } = useAuth();

@@ -1,7 +1,44 @@
 /**
  * SelMoldInfoCreate / PATCH 请求体拼装（对齐 backend SelMoldInfoWrite + 嵌套）
  */
+import {
+  HNZ_CATEGORY_FALLBACK_LABELS,
+  HNZ_CATEGORY_ORDER,
+  hnzCategoryCodeToWizardRootKey,
+  HNZ_WIZARD_ROOT_ID_KEYS,
+} from "@/features/selection-catalog/hotNozzleDetailDictMeta";
+import {
+  MFLD_CATEGORY_FALLBACK_LABELS,
+  MFLD_MANIFOLD_BODY_CATEGORY_ORDER,
+  MFLD_MANIFOLD_BODY_TEXT_PARTS,
+  MFLD_MANIFOLD_MAIN_BODY_TEXT_KEYS,
+  MFLD_MANIFOLD_NORMAL_BODY_TEXT_KEYS,
+  MFLD_MANIFOLD_NORMAL_ROOT_ID_KEYS,
+  mfldBodyTextFieldKey,
+  mfldCategoryCodeToWizardNormalRootKey,
+} from "@/features/selection-catalog/manifoldDetailDictMeta";
 import type { SelMoldInfoRead, SelProductInfoRead } from "@/lib/selectionCatalogTypes";
+
+const WIZARD_MFLD_NORMAL_ID_LABEL_OVERRIDES: Partial<Record<string, string>> = Object.fromEntries(
+  MFLD_MANIFOLD_BODY_CATEGORY_ORDER.map((code) => [
+    mfldCategoryCodeToWizardNormalRootKey(code),
+    MFLD_CATEGORY_FALLBACK_LABELS[code] ?? code,
+  ]),
+);
+
+const WIZARD_MFLD_BODY_TEXT_LABEL_OVERRIDES: Partial<Record<string, string>> = Object.fromEntries(
+  MFLD_MANIFOLD_BODY_TEXT_PARTS.flatMap(({ part, label }) => [
+    [mfldBodyTextFieldKey(part, "main"), label],
+    [mfldBodyTextFieldKey(part, "normal"), label],
+  ]),
+);
+
+const WIZARD_HNZ_ID_LABEL_OVERRIDES: Partial<Record<string, string>> = Object.fromEntries(
+  HNZ_CATEGORY_ORDER.map((code) => [
+    hnzCategoryCodeToWizardRootKey(code),
+    HNZ_CATEGORY_FALLBACK_LABELS[code] ?? code,
+  ]),
+);
 
 export type TriBool = "" | "true" | "false";
 
@@ -380,6 +417,45 @@ export const WIZARD_MOLD_ROOT_STRING_KEYS = [
   "wizard_cae_normal_hot_nozzle_structure_id",
   "wizard_cae_hot_nozzle_runner_diameter_id",
   "wizard_cae_gate_diameter_id",
+  /** 第 7 步：主射咀各大类字典项 UUID（GET …/dict/main-nozzle-detail-options，每分类一个下拉） */
+  "wizard_mnz_body_heated_id",
+  "wizard_mnz_body_unheated_id",
+  "wizard_mnz_other_id",
+  "wizard_mnz_sr_ball_id",
+  "wizard_mnz_main_heater_id",
+  "wizard_mnz_thermocouple_style_id",
+  "wizard_mnz_body_material_id",
+  /** 第 8 步：分流板各大类字典项 UUID（GET …/dict/manifold-detail-options，每分类一个下拉） */
+  "wizard_mfld_process_id",
+  "wizard_mfld_bridge_material_id",
+  "wizard_mfld_bridge_style_id",
+  "wizard_mfld_bridge_channel_diameter_id",
+  "wizard_mfld_manifold_thickness_id",
+  "wizard_mfld_runner_layout_id",
+  "wizard_mfld_point_coding_id",
+  "wizard_mfld_manifold_runner_diameter_id",
+  "wizard_mfld_runner_layers_id",
+  "wizard_mfld_spacer_block_id",
+  "wizard_mfld_plate_disc_spring_id",
+  "wizard_mfld_center_locating_pin_id",
+  "wizard_mfld_anti_rotation_pin_id",
+  "wizard_mfld_plug_regular_id",
+  "wizard_mfld_plug_flat_id",
+  "wizard_mfld_plug_insert_basic_id",
+  "wizard_mfld_plug_insert_t_id",
+  "wizard_mfld_plug_insert_i_id",
+  "wizard_mfld_plug_insert_l_id",
+  "wizard_mfld_water_connector_id",
+  "wizard_mfld_oil_connector_id",
+  "wizard_mfld_rule_label_id",
+  "wizard_mfld_water_page_id",
+  /** 第 8 步法向分流板：与主体同构，复用 hrspec_mfld_* 选项，独立 UUID 草稿键 */
+  ...MFLD_MANIFOLD_NORMAL_ROOT_ID_KEYS,
+  /** 第 8 步分流板主体 / 法向分流板：补充文本（非字典） */
+  ...MFLD_MANIFOLD_MAIN_BODY_TEXT_KEYS,
+  ...MFLD_MANIFOLD_NORMAL_BODY_TEXT_KEYS,
+  /** 第 9 步：热咀各大类字典项 UUID（GET …/dict/hot-nozzle-detail-options，每分类一个下拉） */
+  ...HNZ_WIZARD_ROOT_ID_KEYS,
 ] as const;
 
 export const WIZARD_MOLD_TRIBOOL_KEYS = [
@@ -419,6 +495,39 @@ export const WIZARD_MOLD_LABEL_OVERRIDES: Partial<Record<string, string>> = {
   wizard_cae_normal_hot_nozzle_structure_id: "法向热咀",
   wizard_cae_hot_nozzle_runner_diameter_id: "热咀流道直径",
   wizard_cae_gate_diameter_id: "胶口直径",
+  wizard_mnz_body_heated_id: "主射咀本体-加热型",
+  wizard_mnz_body_unheated_id: "主射咀本体-不加热型",
+  wizard_mnz_other_id: "其他配件",
+  wizard_mnz_sr_ball_id: "SR球头",
+  wizard_mnz_main_heater_id: "主射咀加热器",
+  wizard_mnz_thermocouple_style_id: "感温线样式",
+  wizard_mnz_body_material_id: "主射咀本体材质",
+  wizard_mfld_process_id: "属性类-工艺",
+  wizard_mfld_bridge_material_id: "属性类-分流板材质",
+  wizard_mfld_bridge_style_id: "桥板-分流板搭桥样式",
+  wizard_mfld_bridge_channel_diameter_id: "桥板-桥流道直径",
+  wizard_mfld_manifold_thickness_id: "分流板厚度",
+  wizard_mfld_runner_layout_id: "流道走向示意图（分流板主体）",
+  wizard_mfld_point_coding_id: "点位编码",
+  wizard_mfld_manifold_runner_diameter_id: "分流板流道直径（分流板主体）",
+  wizard_mfld_runner_layers_id: "流道层数",
+  wizard_mfld_spacer_block_id: "垫块",
+  wizard_mfld_plate_disc_spring_id: "板上碟簧",
+  wizard_mfld_center_locating_pin_id: "中心定位销",
+  wizard_mfld_anti_rotation_pin_id: "防转销",
+  wizard_mfld_plug_regular_id: "堵头-常规堵头",
+  wizard_mfld_plug_flat_id: "堵头-平面堵头",
+  wizard_mfld_plug_insert_basic_id: "堵头-镶件堵头-基本型",
+  wizard_mfld_plug_insert_t_id: "堵头-镶件堵头-T型",
+  wizard_mfld_plug_insert_i_id: "堵头-镶件堵头-I型",
+  wizard_mfld_plug_insert_l_id: "堵头-镶件堵头-L型",
+  wizard_mfld_water_connector_id: "线架-水接头",
+  wizard_mfld_oil_connector_id: "线架-油接头",
+  wizard_mfld_rule_label_id: "线架-规格标牌",
+  wizard_mfld_water_page_id: "线架-水路版",
+  ...WIZARD_MFLD_NORMAL_ID_LABEL_OVERRIDES,
+  ...WIZARD_MFLD_BODY_TEXT_LABEL_OVERRIDES,
+  ...WIZARD_HNZ_ID_LABEL_OVERRIDES,
 };
 
 export function wizardMoldFieldLabel(key: string): string {

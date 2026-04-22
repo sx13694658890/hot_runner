@@ -22,8 +22,12 @@ SEL_MAIN_NOZZLE_DICT_SEED: list[tuple[str, str, int, list[str]]] = [
         ],
     ),
     ("hrspec_mnz_body_unheated", "主射咀本体-不加热型", 8101, ["30", "35"]),
-    ("hrspec_mnz_adapter_ring_bridge", "主射咀转接环（搭桥）", 8102, ["Φ8", "Φ10"]),
-    ("hrspec_mnz_adapter_ring_stack", "主射咀转接环（叠模）", 8103, []),
+    (
+        "hrspec_mnz_other",
+        "其他配件",
+        8102,
+        [],
+    ),
     (
         "hrspec_mnz_sr_ball",
         "SR球头",
